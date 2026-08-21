@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.clinica</groupId>
+    <artifactId>clinica-medica</artifactId>
+    <version>1.0</version>
+    <packaging>jar</packaging>
+
+    <name>Sistema de Gestion de Clinica Medica</name>
+
+    <properties>
+        <!--
+            Se usa "release" y no source/target: release impide compilar contra
+            APIs que no existan en Java 21, aunque se compile con un JDK mas
+            nuevo. Asi el JAR corre sin sorpresas en la maquina del revisor.
+        -->
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <!--
+        No se declara ninguna dependencia externa a proposito:
+        el enunciado exige que todo el manejo de archivos sea codigo propio,
+        y Swing viene incluido en el JDK.
+    -->
+
+    <build>
+        <finalName>clinica-medica</finalName>
+        <plugins>
+            <!-- Genera el JAR ejecutable con la clase principal en el manifiesto -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.1</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.clinica.Main</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
