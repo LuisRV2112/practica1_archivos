@@ -1,7 +1,9 @@
 package com.clinica.vista;
 
 import com.clinica.persistencia.ArchivoMedicos;
+import com.clinica.persistencia.ArchivoPacientes;
 import com.clinica.servicio.ServicioMedicos;
+import com.clinica.servicio.ServicioPacientes;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -25,9 +27,12 @@ import java.io.IOException;
 public class VentanaPrincipal extends JFrame {
 
     private final ArchivoMedicos archivoMedicos;
+    private final ArchivoPacientes archivoPacientes;
 
-    public VentanaPrincipal(ArchivoMedicos archivoMedicos, ServicioMedicos servicioMedicos) {
+    public VentanaPrincipal(ArchivoMedicos archivoMedicos, ServicioMedicos servicioMedicos,
+                            ArchivoPacientes archivoPacientes, ServicioPacientes servicioPacientes) {
         this.archivoMedicos = archivoMedicos;
+        this.archivoPacientes = archivoPacientes;
 
         setTitle("Sistema de Gestion de Clinica Medica");
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE); // se cierra a mano, tras cerrar archivos
@@ -36,7 +41,7 @@ public class VentanaPrincipal extends JFrame {
 
         JTabbedPane pestanas = new JTabbedPane();
         pestanas.addTab("Medicos", new PanelMedicos(servicioMedicos));
-        pestanas.addTab("Pacientes", panelPendiente("Modulo de pacientes"));
+        pestanas.addTab("Pacientes", new PanelPacientes(servicioPacientes));
         pestanas.addTab("Citas", panelPendiente("Modulo de citas"));
         pestanas.addTab("Reportes", panelPendiente("Modulo de reportes"));
 
@@ -58,9 +63,14 @@ public class VentanaPrincipal extends JFrame {
         return panel;
     }
 
+    /**
+     * Cierra todos los archivos abiertos antes de terminar. Se intenta cerrar
+     * cada uno aunque otro falle, para no dejar descriptores colgando.
+     */
     private void cerrarAplicacion() {
         try {
             archivoMedicos.close();
+            archivoPacientes.close();
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(this,
                     "No se pudo cerrar correctamente el archivo de datos:\n" + ex.getMessage(),

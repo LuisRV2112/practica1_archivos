@@ -1,7 +1,9 @@
 package com.clinica;
 
 import com.clinica.persistencia.ArchivoMedicos;
+import com.clinica.persistencia.ArchivoPacientes;
 import com.clinica.servicio.ServicioMedicos;
+import com.clinica.servicio.ServicioPacientes;
 import com.clinica.vista.VentanaPrincipal;
 
 import javax.swing.JOptionPane;
@@ -33,10 +35,14 @@ public class Main {
         try {
             ArchivoMedicos archivoMedicos =
                     new ArchivoMedicos(CARPETA_DATOS + "/medicos.dat");
+            ArchivoPacientes archivoPacientes =
+                    new ArchivoPacientes(CARPETA_DATOS + "/pacientes.dat");
 
             ServicioMedicos servicioMedicos = new ServicioMedicos(archivoMedicos);
+            ServicioPacientes servicioPacientes = new ServicioPacientes(archivoPacientes);
 
-            new VentanaPrincipal(archivoMedicos, servicioMedicos).setVisible(true);
+            new VentanaPrincipal(archivoMedicos, servicioMedicos,
+                    archivoPacientes, servicioPacientes).setVisible(true);
 
         } catch (IOException e) {
             JOptionPane.showMessageDialog(null,

@@ -2,6 +2,7 @@ package com.clinica.persistencia;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.time.LocalDate;
 import java.time.LocalTime;
 
 /**
@@ -74,5 +75,23 @@ public final class UtilArchivo {
     /** Cuantos bytes ocupa un campo de texto de {@code caracteres} de largo. */
     public static int bytesDeCadena(int caracteres) {
         return caracteres * Character.BYTES; // 2 bytes por caracter
+    }
+
+    /**
+     * Escribe una fecha como los dias transcurridos desde el 1 de enero de 1970.
+     * Ocupa 8 bytes fijos y admite fechas anteriores a esa (dias negativos), lo
+     * que importa para las fechas de nacimiento.
+     *
+     * Un valor nulo se guarda como Long.MIN_VALUE, que nunca puede ser una
+     * fecha real.
+     */
+    public static void escribirFecha(RandomAccessFile archivo, LocalDate fecha) throws IOException {
+        archivo.writeLong(fecha == null ? Long.MIN_VALUE : fecha.toEpochDay());
+    }
+
+    /** Lee una fecha guardada con {@link #escribirFecha}. */
+    public static LocalDate leerFecha(RandomAccessFile archivo) throws IOException {
+        long dias = archivo.readLong();
+        return (dias == Long.MIN_VALUE) ? null : LocalDate.ofEpochDay(dias);
     }
 }
