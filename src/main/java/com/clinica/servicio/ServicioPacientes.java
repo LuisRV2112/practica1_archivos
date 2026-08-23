@@ -1,7 +1,9 @@
 package com.clinica.servicio;
 
+import com.clinica.modelo.Cita;
 import com.clinica.modelo.Paciente;
 import com.clinica.modelo.TipoSangre;
+import com.clinica.persistencia.ArchivoCitas;
 import com.clinica.persistencia.ArchivoPacientes;
 
 import java.io.IOException;
@@ -43,8 +45,16 @@ public class ServicioPacientes {
 
     private final ArchivoPacientes archivo;
 
-    public ServicioPacientes(ArchivoPacientes archivo) {
+    /**
+     * Archivo de citas. Se necesita para impedir que se elimine a un paciente
+     * que tenga citas registradas. Se recibe el archivo y no ServicioCitas para
+     * evitar una dependencia circular entre servicios.
+     */
+    private final ArchivoCitas archivoCitas;
+
+    public ServicioPacientes(ArchivoPacientes archivo, ArchivoCitas archivoCitas) {
         this.archivo = archivo;
+        this.archivoCitas = archivoCitas;
     }
 
     // =======================================================================
@@ -76,14 +86,32 @@ public class ServicioPacientes {
     }
 
     /**
-     * Elimina un paciente.
+     * Elimina un paciente, siempre que no tenga citas registradas.
      *
-     * NOTA PENDIENTE: cuando exista el modulo de citas habra que impedir borrar
-     * a un paciente que tenga citas registradas, o el archivo de citas quedaria
-     * apuntando a alguien que ya no existe.
+     * Borrarlo con citas dejaria el archivo de citas apuntando a alguien que ya
+     * no existe: registros huerfanos que el sistema no sabria como mostrar. Es
+     * la integridad referencial que en una base de datos haria el motor, y que
+     * aqui toca garantizar a mano.
      */
     public void eliminar(String identificacion) throws ExcepcionValidacion, IOException {
-        if (!archivo.eliminar(normalizar(identificacion))) {
+        String id = normalizar(identificacion);
+
+        int citasDelPaciente = 0;
+        for (Cita cita : archivoCitas.listarTodos()) {
+            if (id.equals(cita.getIdentificacionPaciente())) {
+                citasDelPaciente++;
+            }
+        }
+
+        if (citasDelPaciente > 0) {
+            throw new ExcepcionValidacion(
+                    "No se puede eliminar el paciente porque tiene "
+                            + citasDelPaciente
+                            + (citasDelPaciente == 1 ? " cita registrada." : " citas registradas.")
+                            + "\nElimine primero sus citas.");
+        }
+
+        if (!archivo.eliminar(id)) {
             throw new ExcepcionValidacion("No se encontro el paciente indicado.");
         }
     }
@@ -132,9 +160,9 @@ public class ServicioPacientes {
 
         for (Paciente p : listar()) {
             boolean coincide =
-                       p.getNombres().toLowerCase().contains(aguja)
-                    || p.getApellidos().toLowerCase().contains(aguja)
-                    || p.getIdentificacion().toLowerCase().contains(aguja);
+                    p.getNombres().toLowerCase().contains(aguja)
+                            || p.getApellidos().toLowerCase().contains(aguja)
+                            || p.getIdentificacion().toLowerCase().contains(aguja);
 
             if (coincide) {
                 resultado.add(p);

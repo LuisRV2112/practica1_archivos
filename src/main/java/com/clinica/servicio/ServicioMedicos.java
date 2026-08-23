@@ -1,6 +1,9 @@
 package com.clinica.servicio;
 
+import com.clinica.modelo.Cita;
+import com.clinica.modelo.EstadoCita;
 import com.clinica.modelo.Medico;
+import com.clinica.persistencia.ArchivoCitas;
 import com.clinica.persistencia.ArchivoMedicos;
 
 import java.io.IOException;
@@ -34,8 +37,19 @@ public class ServicioMedicos {
 
     private final ArchivoMedicos archivo;
 
-    public ServicioMedicos(ArchivoMedicos archivo) {
+    /**
+     * Archivo de citas. Se necesita para comprobar que un cambio de horario no
+     * deje inconsistentes las citas ya programadas.
+     *
+     * Se recibe el ARCHIVO y no ServicioCitas a proposito: ServicioCitas ya
+     * depende de ArchivoMedicos, y pedirle el servicio crearia una dependencia
+     * circular entre las dos clases.
+     */
+    private final ArchivoCitas archivoCitas;
+
+    public ServicioMedicos(ArchivoMedicos archivo, ArchivoCitas archivoCitas) {
         this.archivo = archivo;
+        this.archivoCitas = archivoCitas;
     }
 
     // =======================================================================
@@ -56,9 +70,10 @@ public class ServicioMedicos {
     /**
      * Guarda los cambios de un medico existente.
      *
-     * NOTA PENDIENTE: cuando exista el modulo de citas, aqui habra que
-     * verificar que el nuevo horario no deje fuera de rango a citas ya
-     * programadas, tal como pide el enunciado.
+     * Si el horario de atencion cambia, primero se comprueba que ninguna cita ya
+     * programada quede fuera del nuevo rango. El enunciado lo pide
+     * explicitamente: modificar el horario no debe generar inconsistencias con
+     * citas previamente programadas.
      */
     public void modificar(Medico medico) throws ExcepcionValidacion, IOException {
         if (medico.getId() == null) {
@@ -66,8 +81,64 @@ public class ServicioMedicos {
         }
         validar(medico);
 
-        if (!archivo.actualizar(medico)) {
+        Medico anterior = archivo.buscarPorId(medico.getId());
+        if (anterior == null) {
             throw new ExcepcionValidacion("El medico ya no existe en el archivo.");
+        }
+
+        boolean cambioHorario =
+                !medico.getHoraInicio().equals(anterior.getHoraInicio())
+                        || !medico.getHoraFin().equals(anterior.getHoraFin());
+
+        if (cambioHorario) {
+            verificarHorarioContraCitas(medico);
+        }
+
+        archivo.actualizar(medico);
+    }
+
+    /**
+     * Rechaza un horario nuevo si alguna cita programada quedaria fuera de el.
+     *
+     * Solo se toman en cuenta las citas PROGRAMADAS: las canceladas y las ya
+     * atendidas pertenecen al pasado y no estorban.
+     */
+    private void verificarHorarioContraCitas(Medico medico)
+            throws ExcepcionValidacion, IOException {
+
+        List<Cita> conflictivas = new ArrayList<>();
+
+        for (Cita cita : archivoCitas.listarTodos()) {
+            if (!medico.getId().equals(cita.getIdMedico())) {
+                continue;
+            }
+            if (cita.getEstado() != EstadoCita.PROGRAMADA || cita.getHoraInicio() == null) {
+                continue;
+            }
+
+            LocalTime inicio = cita.getHoraInicio();
+            LocalTime fin = inicio.plusMinutes(ServicioCitas.DURACION_MINUTOS);
+
+            if (inicio.isBefore(medico.getHoraInicio()) || fin.isAfter(medico.getHoraFin())) {
+                conflictivas.add(cita);
+            }
+        }
+
+        if (!conflictivas.isEmpty()) {
+            StringBuilder detalle = new StringBuilder();
+            detalle.append("El horario nuevo dejaria fuera ")
+                    .append(conflictivas.size())
+                    .append(conflictivas.size() == 1 ? " cita ya programada:" : " citas ya programadas:");
+
+            for (Cita c : conflictivas) {
+                detalle.append("\n  - ")
+                        .append(c.getFecha())
+                        .append(" a las ")
+                        .append(formatearHora(c.getHoraInicio()));
+            }
+            detalle.append("\n\nCancele o reprograme esas citas antes de cambiar el horario.");
+
+            throw new ExcepcionValidacion(detalle.toString());
         }
     }
 
@@ -127,10 +198,10 @@ public class ServicioMedicos {
 
         for (Medico m : listar()) {
             boolean coincide =
-                       m.getNombres().toLowerCase().contains(aguja)
-                    || m.getApellidos().toLowerCase().contains(aguja)
-                    || m.getEspecialidad().toLowerCase().contains(aguja)
-                    || m.getId().toString().toLowerCase().startsWith(aguja);
+                    m.getNombres().toLowerCase().contains(aguja)
+                            || m.getApellidos().toLowerCase().contains(aguja)
+                            || m.getEspecialidad().toLowerCase().contains(aguja)
+                            || m.getId().toString().toLowerCase().startsWith(aguja);
 
             if (coincide) {
                 resultado.add(m);

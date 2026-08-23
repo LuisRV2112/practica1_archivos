@@ -1,7 +1,9 @@
 package com.clinica.vista;
 
+import com.clinica.persistencia.ArchivoCitas;
 import com.clinica.persistencia.ArchivoMedicos;
 import com.clinica.persistencia.ArchivoPacientes;
+import com.clinica.servicio.ServicioCitas;
 import com.clinica.servicio.ServicioMedicos;
 import com.clinica.servicio.ServicioPacientes;
 
@@ -28,11 +30,14 @@ public class VentanaPrincipal extends JFrame {
 
     private final ArchivoMedicos archivoMedicos;
     private final ArchivoPacientes archivoPacientes;
+    private final ArchivoCitas archivoCitas;
 
     public VentanaPrincipal(ArchivoMedicos archivoMedicos, ServicioMedicos servicioMedicos,
-                            ArchivoPacientes archivoPacientes, ServicioPacientes servicioPacientes) {
+                            ArchivoPacientes archivoPacientes, ServicioPacientes servicioPacientes,
+                            ArchivoCitas archivoCitas, ServicioCitas servicioCitas) {
         this.archivoMedicos = archivoMedicos;
         this.archivoPacientes = archivoPacientes;
+        this.archivoCitas = archivoCitas;
 
         setTitle("Sistema de Gestion de Clinica Medica");
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE); // se cierra a mano, tras cerrar archivos
@@ -42,7 +47,7 @@ public class VentanaPrincipal extends JFrame {
         JTabbedPane pestanas = new JTabbedPane();
         pestanas.addTab("Medicos", new PanelMedicos(servicioMedicos));
         pestanas.addTab("Pacientes", new PanelPacientes(servicioPacientes));
-        pestanas.addTab("Citas", panelPendiente("Modulo de citas"));
+        pestanas.addTab("Citas", new PanelCitas(servicioCitas, servicioMedicos, servicioPacientes));
         pestanas.addTab("Reportes", panelPendiente("Modulo de reportes"));
 
         add(pestanas, BorderLayout.CENTER);
@@ -71,6 +76,7 @@ public class VentanaPrincipal extends JFrame {
         try {
             archivoMedicos.close();
             archivoPacientes.close();
+            archivoCitas.close();
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(this,
                     "No se pudo cerrar correctamente el archivo de datos:\n" + ex.getMessage(),

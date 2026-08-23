@@ -1,7 +1,9 @@
 package com.clinica;
 
+import com.clinica.persistencia.ArchivoCitas;
 import com.clinica.persistencia.ArchivoMedicos;
 import com.clinica.persistencia.ArchivoPacientes;
+import com.clinica.servicio.ServicioCitas;
 import com.clinica.servicio.ServicioMedicos;
 import com.clinica.servicio.ServicioPacientes;
 import com.clinica.vista.VentanaPrincipal;
@@ -33,16 +35,27 @@ public class Main {
         }
 
         try {
+            // Primero los archivos: los servicios dependen de ellos, nunca al reves.
             ArchivoMedicos archivoMedicos =
                     new ArchivoMedicos(CARPETA_DATOS + "/medicos.dat");
             ArchivoPacientes archivoPacientes =
                     new ArchivoPacientes(CARPETA_DATOS + "/pacientes.dat");
+            ArchivoCitas archivoCitas =
+                    new ArchivoCitas(CARPETA_DATOS + "/citas.dat");
 
-            ServicioMedicos servicioMedicos = new ServicioMedicos(archivoMedicos);
-            ServicioPacientes servicioPacientes = new ServicioPacientes(archivoPacientes);
+            // Los servicios de medicos y pacientes reciben tambien el archivo de
+            // citas, que necesitan para las validaciones cruzadas (no borrar un
+            // paciente con citas, no dejar citas fuera del horario del medico).
+            ServicioMedicos servicioMedicos =
+                    new ServicioMedicos(archivoMedicos, archivoCitas);
+            ServicioPacientes servicioPacientes =
+                    new ServicioPacientes(archivoPacientes, archivoCitas);
+            ServicioCitas servicioCitas =
+                    new ServicioCitas(archivoCitas, archivoMedicos, archivoPacientes);
 
             new VentanaPrincipal(archivoMedicos, servicioMedicos,
-                    archivoPacientes, servicioPacientes).setVisible(true);
+                    archivoPacientes, servicioPacientes,
+                    archivoCitas, servicioCitas).setVisible(true);
 
         } catch (IOException e) {
             JOptionPane.showMessageDialog(null,
