@@ -69,11 +69,14 @@ import java.util.UUID;
 public class ArchivoMedicos implements Closeable {
 
     // ----- Longitudes de los campos de texto, en caracteres -----
-    private static final int LARGO_NOMBRES = 40;
-    private static final int LARGO_APELLIDOS = 40;
-    private static final int LARGO_ESPECIALIDAD = 30;
-    private static final int LARGO_TELEFONO = 15;
-    private static final int LARGO_CORREO = 50;
+    // Son publicas a proposito: la capa de servicio las usa para validar y
+    // rechazar un texto demasiado largo, en lugar de dejar que se recorte en
+    // silencio al escribirlo.
+    public static final int LARGO_NOMBRES = 40;
+    public static final int LARGO_APELLIDOS = 40;
+    public static final int LARGO_ESPECIALIDAD = 30;
+    public static final int LARGO_TELEFONO = 15;
+    public static final int LARGO_CORREO = 50;
 
     // ----- Cabecera -----
     private static final int VERSION_FORMATO = 1;
