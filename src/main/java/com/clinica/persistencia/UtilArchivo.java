@@ -3,7 +3,9 @@ package com.clinica.persistencia;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
 
 /**
  * Utilidades de bajo nivel para escribir y leer campos de LONGITUD FIJA.
@@ -93,5 +95,30 @@ public final class UtilArchivo {
     public static LocalDate leerFecha(RandomAccessFile archivo) throws IOException {
         long dias = archivo.readLong();
         return (dias == Long.MIN_VALUE) ? null : LocalDate.ofEpochDay(dias);
+    }
+
+    /**
+     * Escribe una fecha con hora como segundos desde el 1 de enero de 1970.
+     * Ocupa 8 bytes fijos.
+     *
+     * Se usa ZoneOffset.UTC como referencia fija tanto al escribir como al leer.
+     * Lo importante no es que sea UTC, sino que sea SIEMPRE EL MISMO desplazamiento:
+     * si se usara la zona horaria del sistema, mover la maquina de zona (o un
+     * cambio de horario de verano) haria que las marcas de tiempo ya guardadas se
+     * leyeran corridas.
+     */
+    public static void escribirFechaHora(RandomAccessFile archivo, LocalDateTime momento)
+            throws IOException {
+        archivo.writeLong(momento == null
+                ? Long.MIN_VALUE
+                : momento.toEpochSecond(ZoneOffset.UTC));
+    }
+
+    /** Lee una marca de tiempo guardada con {@link #escribirFechaHora}. */
+    public static LocalDateTime leerFechaHora(RandomAccessFile archivo) throws IOException {
+        long segundos = archivo.readLong();
+        return (segundos == Long.MIN_VALUE)
+                ? null
+                : LocalDateTime.ofEpochSecond(segundos, 0, ZoneOffset.UTC);
     }
 }

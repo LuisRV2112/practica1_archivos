@@ -2,6 +2,7 @@ package com.clinica.servicio;
 
 import com.clinica.modelo.Cita;
 import com.clinica.modelo.Paciente;
+import com.clinica.modelo.TipoOperacion;
 import com.clinica.modelo.TipoSangre;
 import com.clinica.persistencia.ArchivoCitas;
 import com.clinica.persistencia.ArchivoPacientes;
@@ -52,9 +53,14 @@ public class ServicioPacientes {
      */
     private final ArchivoCitas archivoCitas;
 
-    public ServicioPacientes(ArchivoPacientes archivo, ArchivoCitas archivoCitas) {
+    /** Bitacora donde se anota cada operacion del modulo. */
+    private final ServicioBitacora bitacora;
+
+    public ServicioPacientes(ArchivoPacientes archivo, ArchivoCitas archivoCitas,
+                             ServicioBitacora bitacora) {
         this.archivo = archivo;
         this.archivoCitas = archivoCitas;
+        this.bitacora = bitacora;
     }
 
     // =======================================================================
@@ -70,6 +76,9 @@ public class ServicioPacientes {
                             + paciente.getIdentificacion() + ".");
         }
         archivo.insertar(paciente);
+        bitacora.registrar(ServicioBitacora.MODULO_PACIENTES, TipoOperacion.CREACION,
+                "Se registro al paciente " + paciente.getNombreCompleto()
+                        + " (" + paciente.getIdentificacion() + ")");
     }
 
     /**
@@ -83,6 +92,10 @@ public class ServicioPacientes {
         if (!archivo.actualizar(paciente)) {
             throw new ExcepcionValidacion("El paciente ya no existe en el archivo.");
         }
+
+        bitacora.registrar(ServicioBitacora.MODULO_PACIENTES, TipoOperacion.ACTUALIZACION,
+                "Se modificaron los datos del paciente " + paciente.getNombreCompleto()
+                        + " (" + paciente.getIdentificacion() + ")");
     }
 
     /**
@@ -111,9 +124,15 @@ public class ServicioPacientes {
                             + "\nElimine primero sus citas.");
         }
 
+        Paciente paciente = archivo.buscarPorId(id);
+
         if (!archivo.eliminar(id)) {
             throw new ExcepcionValidacion("No se encontro el paciente indicado.");
         }
+
+        bitacora.registrar(ServicioBitacora.MODULO_PACIENTES, TipoOperacion.ELIMINACION,
+                "Se elimino al paciente "
+                        + (paciente == null ? id : paciente.getNombreCompleto() + " (" + id + ")"));
     }
 
     // =======================================================================

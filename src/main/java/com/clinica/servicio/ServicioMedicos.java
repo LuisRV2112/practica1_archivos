@@ -1,6 +1,7 @@
 package com.clinica.servicio;
 
 import com.clinica.modelo.Cita;
+import com.clinica.modelo.TipoOperacion;
 import com.clinica.modelo.EstadoCita;
 import com.clinica.modelo.Medico;
 import com.clinica.persistencia.ArchivoCitas;
@@ -47,9 +48,14 @@ public class ServicioMedicos {
      */
     private final ArchivoCitas archivoCitas;
 
-    public ServicioMedicos(ArchivoMedicos archivo, ArchivoCitas archivoCitas) {
+    /** Bitacora donde se anota cada operacion del modulo. */
+    private final ServicioBitacora bitacora;
+
+    public ServicioMedicos(ArchivoMedicos archivo, ArchivoCitas archivoCitas,
+                           ServicioBitacora bitacora) {
         this.archivo = archivo;
         this.archivoCitas = archivoCitas;
+        this.bitacora = bitacora;
     }
 
     // =======================================================================
@@ -64,7 +70,12 @@ public class ServicioMedicos {
     public UUID registrar(Medico medico) throws ExcepcionValidacion, IOException {
         validar(medico);
         medico.setId(null); // se fuerza a que el id lo genere el sistema
-        return archivo.insertar(medico);
+
+        UUID id = archivo.insertar(medico);
+        bitacora.registrar(ServicioBitacora.MODULO_MEDICOS, TipoOperacion.CREACION,
+                "Se registro al medico " + medico.getNombreCompleto()
+                        + " (" + medico.getEspecialidad() + ")");
+        return id;
     }
 
     /**
@@ -95,6 +106,8 @@ public class ServicioMedicos {
         }
 
         archivo.actualizar(medico);
+        bitacora.registrar(ServicioBitacora.MODULO_MEDICOS, TipoOperacion.ACTUALIZACION,
+                "Se modificaron los datos del medico " + medico.getNombreCompleto());
     }
 
     /**
@@ -150,6 +163,10 @@ public class ServicioMedicos {
         }
         medico.setActivo(activo);
         archivo.actualizar(medico);
+
+        bitacora.registrar(ServicioBitacora.MODULO_MEDICOS, TipoOperacion.CAMBIO_ESTADO,
+                "El medico " + medico.getNombreCompleto() + " quedo "
+                        + (activo ? "activo" : "inactivo"));
     }
 
     // =======================================================================

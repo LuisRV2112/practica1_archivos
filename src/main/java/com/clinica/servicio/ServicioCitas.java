@@ -4,6 +4,7 @@ import com.clinica.modelo.Cita;
 import com.clinica.modelo.EstadoCita;
 import com.clinica.modelo.Medico;
 import com.clinica.modelo.Paciente;
+import com.clinica.modelo.TipoOperacion;
 import com.clinica.persistencia.ArchivoCitas;
 import com.clinica.persistencia.ArchivoMedicos;
 import com.clinica.persistencia.ArchivoPacientes;
@@ -46,11 +47,15 @@ public class ServicioCitas {
     private final ArchivoMedicos archivoMedicos;
     private final ArchivoPacientes archivoPacientes;
 
+    /** Bitacora donde se anota cada operacion del modulo. */
+    private final ServicioBitacora bitacora;
+
     public ServicioCitas(ArchivoCitas archivo, ArchivoMedicos archivoMedicos,
-                         ArchivoPacientes archivoPacientes) {
+                         ArchivoPacientes archivoPacientes, ServicioBitacora bitacora) {
         this.archivo = archivo;
         this.archivoMedicos = archivoMedicos;
         this.archivoPacientes = archivoPacientes;
+        this.bitacora = bitacora;
     }
 
     // =======================================================================
@@ -69,7 +74,12 @@ public class ServicioCitas {
         cita.setEstado(EstadoCita.PROGRAMADA);
 
         validar(cita, true);
-        return archivo.insertar(cita);
+        UUID id = archivo.insertar(cita);
+
+        bitacora.registrar(ServicioBitacora.MODULO_CITAS, TipoOperacion.CREACION,
+                "Cita programada para el paciente " + cita.getIdentificacionPaciente()
+                        + " el " + cita.getFecha() + " a las " + cita.getHoraInicio());
+        return id;
     }
 
     /**
@@ -92,6 +102,10 @@ public class ServicioCitas {
         cita.setMotivo(nuevoMotivo);
         cita.setObservaciones(nuevasObservaciones);
         archivo.actualizar(cita);
+
+        bitacora.registrar(ServicioBitacora.MODULO_CITAS, TipoOperacion.ACTUALIZACION,
+                "Se actualizo el motivo/observaciones de la cita del "
+                        + cita.getFecha() + " a las " + cita.getHoraInicio());
     }
 
     /** Cancela una cita. Solo tiene sentido sobre una cita programada. */
@@ -108,6 +122,10 @@ public class ServicioCitas {
 
         cita.setEstado(EstadoCita.CANCELADA);
         archivo.actualizar(cita);
+
+        bitacora.registrar(ServicioBitacora.MODULO_CITAS, TipoOperacion.CAMBIO_ESTADO,
+                "Se cancelo la cita del " + cita.getFecha()
+                        + " a las " + cita.getHoraInicio());
     }
 
     /** Marca una cita como atendida. */
@@ -124,13 +142,24 @@ public class ServicioCitas {
 
         cita.setEstado(EstadoCita.ATENDIDA);
         archivo.actualizar(cita);
+
+        bitacora.registrar(ServicioBitacora.MODULO_CITAS, TipoOperacion.CAMBIO_ESTADO,
+                "Se marco como atendida la cita del " + cita.getFecha()
+                        + " a las " + cita.getHoraInicio());
     }
 
     /** Elimina una cita del archivo. */
     public void eliminar(UUID idCita) throws ExcepcionValidacion, IOException {
+        Cita cita = archivo.buscarPorId(idCita);
+
         if (!archivo.eliminar(idCita)) {
             throw new ExcepcionValidacion("No se encontro la cita indicada.");
         }
+
+        bitacora.registrar(ServicioBitacora.MODULO_CITAS, TipoOperacion.ELIMINACION,
+                "Se elimino la cita "
+                        + (cita == null ? idCita.toString()
+                        : "del " + cita.getFecha() + " a las " + cita.getHoraInicio()));
     }
 
     // =======================================================================
