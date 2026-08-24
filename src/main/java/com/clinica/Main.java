@@ -1,9 +1,12 @@
 package com.clinica;
 
+import com.clinica.persistencia.ArchivoBitacora;
 import com.clinica.persistencia.ArchivoCitas;
 import com.clinica.persistencia.ArchivoMedicos;
 import com.clinica.persistencia.ArchivoPacientes;
+import com.clinica.servicio.ServicioBitacora;
 import com.clinica.servicio.ServicioCitas;
+import com.clinica.servicio.ServicioReportes;
 import com.clinica.servicio.ServicioMedicos;
 import com.clinica.servicio.ServicioPacientes;
 import com.clinica.vista.VentanaPrincipal;
@@ -42,20 +45,31 @@ public class Main {
                     new ArchivoPacientes(CARPETA_DATOS + "/pacientes.dat");
             ArchivoCitas archivoCitas =
                     new ArchivoCitas(CARPETA_DATOS + "/citas.dat");
+            ArchivoBitacora archivoBitacora =
+                    new ArchivoBitacora(CARPETA_DATOS + "/bitacora.dat");
+
+            // La bitacora se arma primero: los tres servicios escriben en ella.
+            ServicioBitacora servicioBitacora = new ServicioBitacora(archivoBitacora);
 
             // Los servicios de medicos y pacientes reciben tambien el archivo de
             // citas, que necesitan para las validaciones cruzadas (no borrar un
             // paciente con citas, no dejar citas fuera del horario del medico).
             ServicioMedicos servicioMedicos =
-                    new ServicioMedicos(archivoMedicos, archivoCitas);
+                    new ServicioMedicos(archivoMedicos, archivoCitas, servicioBitacora);
             ServicioPacientes servicioPacientes =
-                    new ServicioPacientes(archivoPacientes, archivoCitas);
+                    new ServicioPacientes(archivoPacientes, archivoCitas, servicioBitacora);
             ServicioCitas servicioCitas =
-                    new ServicioCitas(archivoCitas, archivoMedicos, archivoPacientes);
+                    new ServicioCitas(archivoCitas, archivoMedicos, archivoPacientes,
+                            servicioBitacora);
+
+            // El servicio de reportes se apoya en los demas, no lee archivos.
+            ServicioReportes servicioReportes = new ServicioReportes(
+                    servicioMedicos, servicioPacientes, servicioCitas, servicioBitacora);
 
             new VentanaPrincipal(archivoMedicos, servicioMedicos,
                     archivoPacientes, servicioPacientes,
-                    archivoCitas, servicioCitas).setVisible(true);
+                    archivoCitas, servicioCitas,
+                    archivoBitacora, servicioBitacora, servicioReportes).setVisible(true);
 
         } catch (IOException e) {
             JOptionPane.showMessageDialog(null,
