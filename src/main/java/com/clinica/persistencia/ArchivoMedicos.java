@@ -7,64 +7,25 @@ import java.time.LocalTime;
 import java.util.UUID;
 
 /**
- * Persistencia de medicos: ARCHIVO SECUENCIAL INDEXADO.
+ * Persistencia de médicos: archivo secuencial indexado.
+ * Datos secuenciales (óptimo para reportes) + índice ordenado para búsqueda binaria O(log n).
  *
- * ---------------------------------------------------------------------------
- * POR QUE ESTA ORGANIZACION
- * ---------------------------------------------------------------------------
- * Los medicos son pocos comparados con los pacientes, casi nunca se dan de alta
- * y se consultan constantemente: cada cita que se programa obliga a verificar
- * que el medico exista, este activo y que la hora caiga en su horario. Ademas,
- * varios reportes del enunciado recorren la lista completa (por especialidad,
- * con mas citas, activos, inactivos).
- *
- * Ese patron —pocas altas, muchas lecturas, y reportes que barren todo— encaja
- * con el archivo secuencial indexado: el archivo de DATOS se mantiene
- * secuencial, que es lo optimo para recorrerlo entero, y un archivo de INDICE
- * aparte se mantiene ORDENADO por clave para localizar un medico con BUSQUEDA
- * BINARIA en O(log n).
- *
- * Se paga al insertar (hay que abrir hueco en el indice para no perder el
- * orden) y se cobra al buscar. En una clinica se consulta mucho mas de lo que
- * se contrata personal, asi que el cambio conviene.
- *
- * El indice vive en un archivo aparte (medicos.idx); ver {@link IndiceOrdenado}.
- *
- * ---------------------------------------------------------------------------
- * REGISTRO DE MEDICO: 380 bytes
- * ---------------------------------------------------------------------------
- *      byte estadoRegistro  (1)    de la clase base
- *      int  siguienteLibre  (4)    de la clase base
- *      long uuidMsb         (8)    bits altos del UUID
- *      long uuidLsb         (8)    bits bajos del UUID
- *      char[40] nombres     (80)
- *      char[40] apellidos   (80)
- *      char[30] especialidad(60)
- *      char[15] telefono    (30)
- *      char[50] correo      (100)
- *      int  horaInicio      (4)    segundos desde medianoche
- *      int  horaFin         (4)
- *      byte activo          (1)    estado del medico en la clinica
- *
- * El UUID se guarda como sus dos mitades de 64 bits (16 bytes) en lugar de como
- * texto (36 caracteres, 72 bytes), y se reconstruye exacto con new UUID(msb, lsb).
+ * Registro de 380 bytes:
+ *   estadoRegistro(1) + siguienteLibre(4) + uuid(16) + nombres(80) +
+ *   apellidos(80) + especialidad(60) + telefono(30) + correo(100) +
+ *   horaInicio(4) + horaFin(4) + activo(1)
  */
 public class ArchivoMedicos extends ArchivoBase<UUID, Medico> {
 
-    // Longitudes de los campos de texto, en caracteres.
-    // Son publicas a proposito: la capa de servicio las usa para validar y
-    // rechazar un texto demasiado largo, en lugar de dejar que se recorte en
-    // silencio al escribirlo.
+    // Longitudes de campos de texto (en caracteres). Públicas para que
+    // servicio las use en validaciones de longitud.
     public static final int LARGO_NOMBRES = 40;
     public static final int LARGO_APELLIDOS = 40;
     public static final int LARGO_ESPECIALIDAD = 30;
     public static final int LARGO_TELEFONO = 15;
     public static final int LARGO_CORREO = 50;
 
-    /**
-     * Tamano del registro. Se calcula sumando los campos en vez de escribir un
-     * numero magico: si manana se agranda un campo, la constante se ajusta sola.
-     */
+    /** Tamaño del registro. Se calcula sumando campos, no con un número mágico. */
     private static final int TAM_REGISTRO =
               TAM_ENCABEZADO_REGISTRO
             + Long.BYTES * 2                                      // uuid
@@ -98,14 +59,9 @@ public class ArchivoMedicos extends ArchivoBase<UUID, Medico> {
         return "Secuencial indexado (busqueda binaria)";
     }
 
-    // =======================================================================
-    // ORGANIZACION: SECUENCIAL INDEXADO
-    // =======================================================================
+    // Organización: secuencial indexado
 
-    /**
-     * Reconstruye el indice si no concuerda con el archivo de datos. Un indice
-     * es informacion derivada: siempre se puede recalcular desde los datos.
-     */
+    /** Reconstruye el índice si no concuerda con el archivo de datos. */
     @Override
     protected void prepararIndice() throws IOException {
         if (indice.getCantidad() == cantidad()) {
@@ -123,7 +79,7 @@ public class ArchivoMedicos extends ArchivoBase<UUID, Medico> {
         }
     }
 
-    /** Busqueda binaria sobre el indice ordenado: O(log n). */
+    /** Búsqueda binaria en índice ordenado: O(log n). */
     @Override
     protected Integer localizar(UUID id) throws IOException {
         return indice.buscar(id);
@@ -144,16 +100,13 @@ public class ArchivoMedicos extends ArchivoBase<UUID, Medico> {
         indice.close();
     }
 
-    /** Comparaciones maximas de una busqueda; para el reporte tecnico. */
+    /** Comparaciones máximas de búsqueda binaria; para reporte técnico. */
     public int comparacionesMaximas() {
         return indice.comparacionesMaximas();
     }
 
-    // =======================================================================
-    // FORMATO DE LOS CAMPOS
-    // =======================================================================
+    // Formato de campos
 
-    /** El UUID lo genera el sistema, nunca el usuario. */
     @Override
     protected void prepararParaInsertar(Medico medico) {
         if (medico.getId() == null) {
@@ -175,8 +128,7 @@ public class ArchivoMedicos extends ArchivoBase<UUID, Medico> {
 
     @Override
     protected void escribirCampos(Medico medico) throws IOException {
-        // El identificador va primero: asi la clase base puede reconstruir el
-        // indice leyendo solo los primeros bytes de cada registro.
+        // UUID primero para que la clase base pueda reconstruir el índice.
         archivo.writeLong(medico.getId().getMostSignificantBits());
         archivo.writeLong(medico.getId().getLeastSignificantBits());
 
@@ -194,7 +146,7 @@ public class ArchivoMedicos extends ArchivoBase<UUID, Medico> {
 
     @Override
     protected Medico leerCampos() throws IOException {
-        // El orden de lectura debe ser EXACTAMENTE el mismo de escribirCampos.
+        // Orden de lectura = orden de escritura en escribirCampos.
         UUID id = leerId();
 
         String nombres = UtilArchivo.leerCadena(archivo, LARGO_NOMBRES);

@@ -11,11 +11,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Bitacora de operaciones del sistema.
- *
- * Todos los modulos escriben aqui cada vez que crean, actualizan o eliminan
- * algo. Es lo que el enunciado pide como "reporte de logs con todas las
- * interacciones realizadas por los usuarios en cada uno de los modulos".
+ * Bitácora de operaciones: todos los módulos escriben aquí cada alta,
+ * modificación o eliminación. Equivale al "reporte de logs" del enunciado.
  */
 public class ServicioBitacora {
 
@@ -34,15 +31,9 @@ public class ServicioBitacora {
     }
 
     /**
-     * Anota una operacion en la bitacora.
-     *
-     * Este metodo NO propaga IOException a proposito. La bitacora es un registro
-     * secundario: si falla al escribirse, la operacion principal (que ya se
-     * completo con exito) no deberia reportarse como fallida al usuario. El
-     * problema se deja constar en la salida de error para no ocultarlo del todo.
-     *
-     * Es una decision consciente entre dos males: perder una linea de bitacora,
-     * o mostrarle al usuario un error sobre algo que en realidad si funciono.
+     * Anota una operación. No propaga IOException: la bitácora es secundaria;
+     * si falla, la operación principal ya se completó con éxito. Se reporta en
+     * stderr para no ocultarlo del todo.
      */
     public void registrar(String modulo, TipoOperacion operacion, String detalle) {
         try {
@@ -60,16 +51,10 @@ public class ServicioBitacora {
     }
 
     /**
-     * Entradas de la bitacora, de la mas reciente a la mas antigua.
-     *
-     * No se ordena por la marca de tiempo, sino invirtiendo el orden fisico del
-     * archivo. La razon: la marca tiene precision de segundos, y varias
-     * operaciones seguidas caen en el mismo segundo, con lo que su orden
-     * relativo quedaria indefinido.
-     *
-     * Invertir el archivo funciona porque la bitacora NUNCA elimina entradas:
-     * al no haber huecos que reutilizar, cada registro nuevo se agrega al final
-     * y el orden fisico es exactamente el orden cronologico.
+     * Entradas de más reciente a más antigua. Se invierte el orden físico del
+     * archivo (no por timestamp) porque varias operaciones seguidas caen en el
+     * mismo segundo y su orden quedaría indefinido. Funciona porque la bitácora
+     * nunca elimina entradas: el orden físico = cronológico.
      */
     public List<EntradaBitacora> listar() throws IOException {
         List<EntradaBitacora> entradas = archivo.listarTodos();
@@ -81,7 +66,7 @@ public class ServicioBitacora {
         return archivo.cantidad();
     }
 
-    /** Da formato legible a una marca de tiempo. */
+    /** Da formato legible dd/MM/yyyy HH:mm:ss. */
     public static String formatearMomento(LocalDateTime momento) {
         return (momento == null) ? "" : momento.format(FORMATO_MOMENTO);
     }

@@ -7,41 +7,14 @@ import java.io.RandomAccessFile;
 import java.util.UUID;
 
 /**
- * Indice ORDENADO sobre archivo, con busqueda binaria. Es lo que convierte al
- * archivo de medicos en un ARCHIVO SECUENCIAL INDEXADO.
+ * Índice ordenado sobre archivo con búsqueda binaria (O(log n)).
+ * Convierte al archivo de médicos en secuencial indexado.
  *
- * ---------------------------------------------------------------------------
- * ESTRUCTURA DEL ARCHIVO DE INDICE
- * ---------------------------------------------------------------------------
+ * Cabecera 4 bytes: cantidad(4)
+ * Entrada 20 bytes: claveMsb(8) + claveLsb(8) + numeroRegistro(4)
  *
- *  [ CABECERA: 4 bytes ][ entrada 0 ][ entrada 1 ] ... ordenadas por clave
- *
- *  Cabecera:
- *      int cantidad  (4)  numero de entradas
- *
- *  Entrada (20 bytes):
- *      long claveMsb        (8)  bits altos del UUID
- *      long claveLsb        (8)  bits bajos del UUID
- *      int  numeroRegistro  (4)  posicion en el archivo de datos
- *
- * ---------------------------------------------------------------------------
- * POR QUE ORDENADO
- * ---------------------------------------------------------------------------
- *
- * El archivo de DATOS queda en el orden en que se fueron insertando los
- * medicos, que es lo mejor para recorrerlo entero al generar reportes. El
- * archivo de INDICE, en cambio, se mantiene siempre ordenado por clave, y eso
- * permite localizar un medico por BUSQUEDA BINARIA: se mira la entrada de en
- * medio, se descarta la mitad que no puede contener la clave y se repite.
- *
- * Con 1000 medicos, un barrido secuencial mira hasta 1000 registros; la
- * busqueda binaria mira 10. Ese es el sentido de tener el indice separado y
- * ordenado.
- *
- * El precio esta en la insercion: para que el indice siga ordenado hay que
- * abrir hueco desplazando las entradas posteriores. Es el compromiso clasico de
- * esta organizacion — se paga al escribir para cobrar al leer, y en una clinica
- * se consulta mucho mas de lo que se da de alta.
+ * El orden se paga al insertar (desplazamiento) para cobrar al leer
+ * (búsqueda binaria en vez de barrido completo).
  */
 public class IndiceOrdenado implements Closeable {
 
@@ -71,14 +44,10 @@ public class IndiceOrdenado implements Closeable {
         }
     }
 
-    // =======================================================================
-    // OPERACIONES
-    // =======================================================================
+    // Operaciones
 
     /**
-     * Busqueda binaria sobre el indice: O(log n).
-     *
-     * @return el numero de registro, o null si la clave no esta
+     * Búsqueda binaria: O(log n). Devuelve la posición en el índice o -1.
      */
     public Integer buscar(UUID clave) throws IOException {
         int posicion = posicionDeClave(clave);
@@ -90,11 +59,9 @@ public class IndiceOrdenado implements Closeable {
     }
 
     /**
-     * Inserta manteniendo el orden.
-     *
-     * Se busca donde deberia ir y se desplazan hacia el final las entradas
-     * posteriores para abrir el hueco. El desplazamiento va de atras hacia
-     * adelante para no sobrescribir una entrada antes de haberla copiado.
+     * Inserta manteniendo el orden desplazando entradas hacia atrás.
+     * El recorrido es de atrás hacia adelante para no sobrescribir antes de
+     * copiar.
      */
     public void insertar(UUID clave, int numeroRegistro) throws IOException {
         int posicion = puntoDeInsercion(clave);
@@ -120,10 +87,7 @@ public class IndiceOrdenado implements Closeable {
         escribirCabecera();
     }
 
-    /**
-     * Cambia el valor asociado a una clave, o la inserta si no estaba.
-     * Lo usa el multianillo para mover la cabeza de un anillo.
-     */
+    /** Actualiza o inserta. Lo usa el multianillo para mover cabezas. */
     public void actualizar(UUID clave, int numeroRegistro) throws IOException {
         int posicion = posicionDeClave(clave);
 
@@ -135,7 +99,7 @@ public class IndiceOrdenado implements Closeable {
         archivo.writeInt(numeroRegistro);
     }
 
-    /** Elimina una clave cerrando el hueco que deja. */
+    /** Elimina una clave cerrando el hueco (desplaza hacia adelante). */
     public void eliminar(UUID clave) throws IOException {
         int posicion = posicionDeClave(clave);
         if (posicion < 0) {
@@ -170,7 +134,7 @@ public class IndiceOrdenado implements Closeable {
         return cantidad;
     }
 
-    /** Comparaciones que hace como maximo una busqueda binaria; para el reporte. */
+    /** Máximo de comparaciones de una búsqueda binaria; para reporte técnico. */
     public int comparacionesMaximas() {
         return (cantidad <= 1) ? cantidad : (int) Math.ceil(Math.log(cantidad) / Math.log(2));
     }
@@ -180,9 +144,7 @@ public class IndiceOrdenado implements Closeable {
         archivo.close();
     }
 
-    // =======================================================================
-    // INTERNOS
-    // =======================================================================
+    // Internos
 
     private long posicionDe(int entrada) {
         return TAM_CABECERA + (long) entrada * TAM_ENTRADA;
@@ -206,7 +168,7 @@ public class IndiceOrdenado implements Closeable {
         int fin = cantidad - 1;
 
         while (inicio <= fin) {
-            int medio = (inicio + fin) >>> 1; // >>> evita el desbordamiento de (a+b)/2
+            int medio = (inicio + fin) >>> 1; // evita desbordamiento de (a+b)/2
             int comparacion = claveEn(medio).compareTo(clave);
 
             if (comparacion == 0) {
@@ -221,7 +183,7 @@ public class IndiceOrdenado implements Closeable {
         return -1;
     }
 
-    /** Posicion donde deberia ir la clave para que el indice siga ordenado. */
+    /** Posición donde debe insertarse para mantener orden. */
     private int puntoDeInsercion(UUID clave) throws IOException {
         int inicio = 0;
         int fin = cantidad - 1;

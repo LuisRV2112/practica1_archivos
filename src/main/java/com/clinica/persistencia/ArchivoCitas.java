@@ -11,63 +11,18 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Persistencia de citas: ARCHIVO MULTIANILLO.
+ * Persistencia de citas: archivo multianillo.
+ * Cada cita se encadena con las de su mismo medico y las de su mismo paciente.
+ * Consultar "todas las citas de X" cuesta O(k) en vez de O(n).
  *
- * ---------------------------------------------------------------------------
- * POR QUE ESTA ORGANIZACION
- * ---------------------------------------------------------------------------
- * A una cita casi nunca se le busca por su propio identificador. Lo que el
- * sistema pregunta todo el tiempo es "todas las citas de ESTE medico" y "todas
- * las citas de ESTE paciente": la agenda del dia, el historial del expediente,
- * la validacion de traslapes al programar, y varios reportes del enunciado.
+ * Registro de 588 bytes:
+ *   estadoRegistro(1) + siguienteLibre(4) + uuidCita(16) + enlaceMedico(4) +
+ *   enlacePaciente(4) + identificacionPaciente(30) + uuidMedico(16) +
+ *   fecha(8) + horaInicio(4) + motivo(200) + estado(1) + observaciones(300)
  *
- * Con un archivo secuencial, cada una de esas consultas obliga a leer el
- * archivo completo y descartar la mayoria de los registros. El multianillo lo
- * resuelve ENCADENANDO los registros que pertenecen al mismo grupo: cada cita
- * guarda en que posicion esta la siguiente cita de su mismo medico, y en cual
- * la siguiente de su mismo paciente. Recuperar la agenda de un medico deja de
- * costar O(n) sobre todo el archivo y pasa a costar O(k), donde k son
- * unicamente SUS citas.
- *
- * Se le llama "multi" anillo porque cada registro pertenece a VARIAS cadenas a
- * la vez: la del medico y la del paciente. Son dos recorridos independientes
- * sobre los mismos registros, sin duplicar un solo byte de informacion.
- *
- * ---------------------------------------------------------------------------
- * DONDE EMPIEZA CADA ANILLO
- * ---------------------------------------------------------------------------
- * La cadena necesita una cabeza. Esas cabezas viven en dos archivos de indice
- * aparte, que reutilizan las mismas estructuras que ya usan las otras
- * entidades:
- *
- *   citas_medico.idx    indice ordenado: UUID del medico    -> primera cita
- *   citas_paciente.hash indice hash:     identificacion     -> primera cita
- *
- * Las citas nuevas se enlazan AL FRENTE del anillo, igual que el apilo de
- * espacios libres: enlazar cuesta O(1) y no hay que recorrer la cadena hasta el
- * final para agregar.
- *
- * ---------------------------------------------------------------------------
- * REGISTRO DE CITA: 588 bytes
- * ---------------------------------------------------------------------------
- *      byte estadoRegistro        (1)    de la clase base
- *      int  siguienteLibre        (4)    de la clase base
- *      long citaMsb               (8)    UUID de la cita
- *      long citaLsb               (8)
- *      int  siguienteDelMedico    (4)    anillo 1: -1 marca el final
- *      int  siguienteDelPaciente  (4)    anillo 2: -1 marca el final
- *      char[15] identificacionPac (30)   referencia al paciente
- *      long medicoMsb             (8)    UUID del medico
- *      long medicoLsb             (8)
- *      long fecha                 (8)    dias desde 1970-01-01
- *      int  horaInicio            (4)    segundos desde medianoche
- *      char[100] motivo           (200)
- *      byte estado                (1)    codigo del enum EstadoCita
- *      char[150] observaciones    (300)
- *
- * Las dos referencias se guardan tal cual, sin copiar nombres ni
- * especialidades: duplicar esos datos obligaria a actualizarlos en dos lugares
- * y tarde o temprano quedarian desincronizados.
+ * Cabezas de anillo en archivos separados:
+ *   citas_medico.idx (ordenado): UUID medico -> primera cita
+ *   citas_paciente.hash: identificación -> primera cita
  */
 public class ArchivoCitas extends ArchivoBase<UUID, Cita> {
 
@@ -90,7 +45,7 @@ public class ArchivoCitas extends ArchivoBase<UUID, Cita> {
                     + Byte.BYTES                                           // estado
                     + UtilArchivo.bytesDeCadena(LARGO_OBSERVACIONES);
 
-    /** Desplazamiento, dentro del registro, donde empiezan los dos enlaces. */
+    /** Desplazamiento donde empiezan los dos enlaces. */
     private static final int DESPLAZAMIENTO_ENLACES =
             TAM_ENCABEZADO_REGISTRO + Long.BYTES * 2;
 
@@ -128,20 +83,11 @@ public class ArchivoCitas extends ArchivoBase<UUID, Cita> {
         return "Multianillo (por medico y por paciente)";
     }
 
-    // =======================================================================
-    // ORGANIZACION: MULTIANILLO
-    // =======================================================================
+    // Organización: multianillo
 
     /**
-     * Rearma los dos anillos desde cero recorriendo el archivo una vez.
-     *
-     * Se reconstruye siempre al abrir, no solo cuando parece descuadrado: los
-     * anillos son informacion derivada y rehacerlos es barato comparado con el
-     * riesgo de arrastrar una cadena rota tras un cierre abrupto.
-     *
-     * Se recorre de atras hacia adelante porque cada cita se enlaza al frente
-     * de su anillo; asi las cadenas quedan en el mismo orden que tendrian si se
-     * hubieran ido insertando una por una.
+     * Reconstruye ambos anillos recorriendo el archivo una vez (atrás hacia
+     * adelante para que las cadenas queden en orden de inserción).
      */
     @Override
     protected void prepararIndice() throws IOException {
@@ -163,10 +109,7 @@ public class ArchivoCitas extends ArchivoBase<UUID, Cita> {
     }
 
     /**
-     * Saca la cita de sus dos anillos antes de que su espacio se reutilice.
-     *
-     * Los datos del registro siguen legibles: la liberacion solo cambia el byte
-     * de estado y el enlace del apilo, no borra el cuerpo.
+     * Saca la cita de ambos anillos antes de que su espacio se reutilice.
      */
     @Override
     protected void indexarEliminacion(UUID id, int numeroRegistro) throws IOException {
@@ -178,11 +121,9 @@ public class ArchivoCitas extends ArchivoBase<UUID, Cita> {
     }
 
     /**
-     * Reescribe la cita conservando sus enlaces.
-     *
-     * Hay que leerlos antes y restaurarlos despues porque escribirCampos deja
-     * los enlaces en -1: el objeto Cita del dominio no los conoce, y no deberia
-     * conocerlos. Son un detalle de como se guarda el archivo, no del negocio.
+     * Reescribe la cita conservando sus enlaces. Se leen antes y restauran
+     * después porque escribirCampos deja los enlaces en -1 (el dominio no los
+     * conoce).
      */
     @Override
     public boolean actualizar(Cita cita) throws IOException {
@@ -206,16 +147,9 @@ public class ArchivoCitas extends ArchivoBase<UUID, Cita> {
         anillosPaciente.close();
     }
 
-    // =======================================================================
-    // RECORRIDO DE LOS ANILLOS
-    // =======================================================================
+    // Recorrido de anillos
 
-    /**
-     * Citas de un medico siguiendo su anillo.
-     *
-     * Solo se leen SUS registros: si el medico tiene 5 citas entre 10000, se
-     * hacen 5 lecturas, no 10000.
-     */
+    /** Citas de un medico siguiendo su anillo: O(k) lecturas. */
     public List<Cita> citasDelMedico(UUID idMedico) throws IOException {
         List<Cita> resultado = new ArrayList<>();
 
@@ -247,21 +181,19 @@ public class ArchivoCitas extends ArchivoBase<UUID, Cita> {
         return resultado;
     }
 
-    /** Cuantos anillos de medico hay activos; para el reporte tecnico. */
+    /** Cuántos anillos de médico hay; para reporte técnico. */
     public int anillosDeMedico() {
         return anillosMedico.getCantidad();
     }
 
-    /** Cuantos anillos de paciente hay activos; para el reporte tecnico. */
+    /** Cuántos anillos de paciente hay; para reporte técnico. */
     public int anillosDePaciente() {
         return anillosPaciente.getCantidad();
     }
 
-    // =======================================================================
-    // MANEJO DE LOS ENLACES
-    // =======================================================================
+    // Manejo de enlaces
 
-    /** Mete la cita al frente de sus dos anillos. */
+    /** Mete la cita al frente de ambos anillos. */
     private void enlazar(int numeroRegistro, UUID medico, String paciente) throws IOException {
         Integer cabezaMedico = anillosMedico.buscar(medico);
         Integer cabezaPaciente = anillosPaciente.buscar(paciente);
@@ -275,13 +207,8 @@ public class ArchivoCitas extends ArchivoBase<UUID, Cita> {
     }
 
     /**
-     * Quita una cita de uno de sus anillos.
-     *
-     * Si era la cabeza, la cabeza pasa a ser la siguiente. Si estaba en medio,
-     * se busca al anterior y se le hace apuntar a la siguiente, saltandose la
-     * que se va. Es el desenlace clasico de una lista simplemente enlazada.
-     *
-     * @param porMedico true para el anillo del medico, false para el del paciente
+     * Quita una cita de uno de sus anillos. Si era cabeza, la cabeza pasa a
+     * ser la siguiente. Si estaba en medio, se salta al anterior.
      */
     private void desenlazar(int numeroRegistro, boolean porMedico,
                             String descripcionClave, UUID claveMedico,
@@ -301,7 +228,7 @@ public class ArchivoCitas extends ArchivoBase<UUID, Cita> {
 
         if (cabeza == numeroRegistro) {
             if (siguienteDelQueSale == FIN_DE_ANILLO) {
-                // Era la unica: el anillo desaparece.
+                // Era la única: el anillo desaparece.
                 if (porMedico) {
                     anillosMedico.eliminar(claveMedico);
                 } else {
@@ -315,7 +242,7 @@ public class ArchivoCitas extends ArchivoBase<UUID, Cita> {
             return;
         }
 
-        // Se recorre buscando al anterior.
+        // Recorre buscando al anterior.
         int anterior = cabeza;
         while (anterior != FIN_DE_ANILLO) {
             int siguiente = porMedico ? enlaceMedicoEn(anterior) : enlacePacienteEn(anterior);
@@ -359,7 +286,7 @@ public class ArchivoCitas extends ArchivoBase<UUID, Cita> {
         return archivo.readInt();
     }
 
-    /** Lee solo el UUID del medico de un registro, sin cargarlo completo. */
+    /** Lee solo el UUID del médico de un registro. */
     private UUID medicoEn(int numeroRegistro) throws IOException {
         archivo.seek(posicionDe(numeroRegistro) + DESPLAZAMIENTO_MEDICO);
         long msb = archivo.readLong();
@@ -367,15 +294,13 @@ public class ArchivoCitas extends ArchivoBase<UUID, Cita> {
         return new UUID(msb, lsb);
     }
 
-    /** Lee solo la identificacion del paciente de un registro. */
+    /** Lee solo la identificación del paciente de un registro. */
     private String pacienteEn(int numeroRegistro) throws IOException {
         archivo.seek(posicionDe(numeroRegistro) + DESPLAZAMIENTO_PACIENTE);
         return UtilArchivo.leerCadena(archivo, LARGO_IDENTIFICACION);
     }
 
-    // =======================================================================
-    // FORMATO DE LOS CAMPOS
-    // =======================================================================
+    // Formato de campos
 
     @Override
     protected void prepararParaInsertar(Cita cita) {
@@ -401,8 +326,7 @@ public class ArchivoCitas extends ArchivoBase<UUID, Cita> {
         archivo.writeLong(cita.getId().getMostSignificantBits());
         archivo.writeLong(cita.getId().getLeastSignificantBits());
 
-        // Los enlaces nacen vacios; los coloca el multianillo despues de
-        // escribir, porque el objeto Cita no los conoce ni debe conocerlos.
+        // Enlaces nacen vacíos; los coloca el multianillo después de escribir.
         archivo.writeInt(FIN_DE_ANILLO);
         archivo.writeInt(FIN_DE_ANILLO);
 
@@ -424,10 +348,10 @@ public class ArchivoCitas extends ArchivoBase<UUID, Cita> {
 
     @Override
     protected Cita leerCampos() throws IOException {
-        // El orden de lectura debe ser EXACTAMENTE el mismo de escribirCampos.
+        // Orden de lectura = orden de escritura en escribirCampos.
         UUID id = leerId();
 
-        archivo.skipBytes(Integer.BYTES * 2); // los enlaces no van al dominio
+        archivo.skipBytes(Integer.BYTES * 2); // enlaces no van al dominio
 
         String identificacionPaciente =
                 UtilArchivo.leerCadena(archivo, LARGO_IDENTIFICACION);

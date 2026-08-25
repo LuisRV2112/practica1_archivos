@@ -18,18 +18,11 @@ import java.util.TreeSet;
 import java.util.UUID;
 
 /**
- * Reglas de negocio del modulo de medicos.
+ * Reglas de negocio de médicos. La vista nunca toca el archivo directamente.
  *
- * Esta capa se interpone entre la vista y el archivo: la interfaz NUNCA toca
- * ArchivoMedicos directamente. Asi, si manana cambia el formato del archivo, la
- * vista no se entera; y si cambia una validacion, la persistencia tampoco.
- *
- * Aqui viven las validaciones que exige el enunciado:
- *   - nombres, apellidos y especialidad son obligatorios
- *   - el correo es opcional
- *   - el UUID debe ser unico
- * mas las que hacen falta para que el archivo no se corrompa (longitudes) y
- * para que los datos tengan sentido (horario coherente).
+ * Validaciones del enunciado: nombres, apellidos y especialidad obligatorios;
+ * correo opcional; UUID único. Plus longitudes para que el texto no se recorte
+ * y horario coherente.
  */
 public class ServicioMedicos {
 
@@ -39,12 +32,9 @@ public class ServicioMedicos {
     private final ArchivoMedicos archivo;
 
     /**
-     * Archivo de citas. Se necesita para comprobar que un cambio de horario no
-     * deje inconsistentes las citas ya programadas.
-     *
-     * Se recibe el ARCHIVO y no ServicioCitas a proposito: ServicioCitas ya
-     * depende de ArchivoMedicos, y pedirle el servicio crearia una dependencia
-     * circular entre las dos clases.
+     * Archivo de citas. Se usa para validar que un cambio de horario no deje
+     * citas programadas fuera del nuevo rango. Se recibe el archivo (no
+     * ServicioCitas) para evitar dependencias circulares.
      */
     private final ArchivoCitas archivoCitas;
 
@@ -58,14 +48,10 @@ public class ServicioMedicos {
         this.bitacora = bitacora;
     }
 
-    // =======================================================================
-    // ALTAS Y CAMBIOS
-    // =======================================================================
+    // Altas y cambios
 
     /**
-     * Registra un medico nuevo. El UUID lo genera la capa de persistencia.
-     *
-     * @return el id asignado
+     * Registra un médico nuevo. El UUID lo genera la capa de persistencia.
      */
     public UUID registrar(Medico medico) throws ExcepcionValidacion, IOException {
         validar(medico);
@@ -79,12 +65,8 @@ public class ServicioMedicos {
     }
 
     /**
-     * Guarda los cambios de un medico existente.
-     *
-     * Si el horario de atencion cambia, primero se comprueba que ninguna cita ya
-     * programada quede fuera del nuevo rango. El enunciado lo pide
-     * explicitamente: modificar el horario no debe generar inconsistencias con
-     * citas previamente programadas.
+     * Modifica un médico existente. Si cambia el horario, verifica que ninguna
+     * cita programada quede fuera del nuevo rango (pide el enunciado).
      */
     public void modificar(Medico medico) throws ExcepcionValidacion, IOException {
         if (medico.getId() == null) {
@@ -110,12 +92,7 @@ public class ServicioMedicos {
                 "Se modificaron los datos del medico " + medico.getNombreCompleto());
     }
 
-    /**
-     * Rechaza un horario nuevo si alguna cita programada quedaria fuera de el.
-     *
-     * Solo se toman en cuenta las citas PROGRAMADAS: las canceladas y las ya
-     * atendidas pertenecen al pasado y no estorban.
-     */
+    /** Rechaza el horario si alguna cita PROGRAMADA queda fuera. */
     private void verificarHorarioContraCitas(Medico medico)
             throws ExcepcionValidacion, IOException {
 
@@ -169,11 +146,9 @@ public class ServicioMedicos {
                         + (activo ? "activo" : "inactivo"));
     }
 
-    // =======================================================================
-    // CONSULTAS
-    // =======================================================================
+    // Consultas
 
-    /** Listado completo, ordenado por apellidos y luego nombres. */
+    /** Listado completo, ordenado por apellidos → nombres. */
     public List<Medico> listar() throws IOException {
         List<Medico> medicos = archivo.listarTodos();
         medicos.sort(Comparator
@@ -186,19 +161,14 @@ public class ServicioMedicos {
         return archivo.buscarPorId(id);
     }
 
-    /**
-     * Busqueda libre por UUID, nombre, apellido o especialidad.
-     * Si el texto es un UUID valido se resuelve con el indice en memoria
-     * (una sola lectura); si no, se recorre el listado comparando sin importar
-     * mayusculas ni acentos de capitalizacion.
-     */
+    /** Busca por UUID (una sola lectura) o libremente por texto. */
     public List<Medico> buscar(String texto) throws IOException {
         String consulta = (texto == null) ? "" : texto.trim();
         if (consulta.isEmpty()) {
             return listar();
         }
 
-        // Camino rapido: el usuario pego un UUID completo.
+        // Camino rápido: UUID completo → búsqueda directa.
         try {
             Medico porId = archivo.buscarPorId(UUID.fromString(consulta));
             List<Medico> unico = new ArrayList<>();
@@ -207,7 +177,7 @@ public class ServicioMedicos {
             }
             return unico;
         } catch (IllegalArgumentException noEsUuid) {
-            // No era un UUID; se sigue con la busqueda por texto.
+            // No era UUID; se sigue con búsqueda por texto.
         }
 
         String aguja = consulta.toLowerCase();
@@ -251,11 +221,7 @@ public class ServicioMedicos {
         return resultado;
     }
 
-    /**
-     * Especialidades distintas registradas, en orden alfabetico.
-     * Sirve para llenar el combo de filtro de la interfaz sin quemar una lista
-     * fija en el codigo.
-     */
+    /** Especialidades distintas, en orden alfabético; para combos de la interfaz. */
     public List<String> especialidades() throws IOException {
         TreeSet<String> conjunto = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         for (Medico m : archivo.listarTodos()) {
@@ -270,15 +236,9 @@ public class ServicioMedicos {
         return archivo.cantidad();
     }
 
-    // =======================================================================
-    // VALIDACIONES
-    // =======================================================================
+    // Validaciones
 
-    /**
-     * Aplica todas las reglas sobre un medico antes de guardarlo.
-     * Se valida ANTES de tocar el archivo: si algo falla, el archivo queda
-     * intacto y no hay escrituras a medias.
-     */
+    /** Aplica todas las reglas antes de tocar el archivo. */
     private void validar(Medico medico) throws ExcepcionValidacion {
         if (medico == null) {
             throw new ExcepcionValidacion("No hay datos del medico.");
@@ -295,19 +255,19 @@ public class ServicioMedicos {
         exigir(medico.getApellidos(), "Los apellidos son obligatorios.");
         exigir(medico.getEspecialidad(), "La especialidad es obligatoria.");
 
-        // --- Longitudes, para que el texto no se recorte al escribirlo ---
+        // --- Longitudes máximas ---
         limitar(medico.getNombres(), ArchivoMedicos.LARGO_NOMBRES, "Nombres");
         limitar(medico.getApellidos(), ArchivoMedicos.LARGO_APELLIDOS, "Apellidos");
         limitar(medico.getEspecialidad(), ArchivoMedicos.LARGO_ESPECIALIDAD, "Especialidad");
         limitar(medico.getTelefono(), ArchivoMedicos.LARGO_TELEFONO, "Telefono");
         limitar(medico.getCorreo(), ArchivoMedicos.LARGO_CORREO, "Correo");
 
-        // --- Correo: opcional, pero si viene debe tener forma de correo ---
+        // --- Correo: opcional pero con formato si viene ---
         if (!medico.getCorreo().isEmpty() && !esCorreoValido(medico.getCorreo())) {
             throw new ExcepcionValidacion("El correo electronico no tiene un formato valido.");
         }
 
-        // --- Horario ---
+        // --- Horario coherente ---
         if (medico.getHoraInicio() == null || medico.getHoraFin() == null) {
             throw new ExcepcionValidacion("Debe indicar el horario de inicio y de finalizacion.");
         }
@@ -335,11 +295,8 @@ public class ServicioMedicos {
         }
     }
 
-    /**
-     * Validacion deliberadamente sencilla: un arroba, algo antes, algo despues
-     * y un punto en el dominio. No se pretende cubrir el estandar completo de
-     * direcciones de correo, solo atajar errores de captura.
-     */
+    /** Validación básica: arroba, algo antes/después, punto en dominio. No es
+     *  RFC completo, solo para atajar errores de captura. */
     private static boolean esCorreoValido(String correo) {
         int arroba = correo.indexOf('@');
         if (arroba <= 0 || arroba != correo.lastIndexOf('@')) {
@@ -353,9 +310,8 @@ public class ServicioMedicos {
     }
 
     /**
-     * Convierte un texto "HH:mm" en LocalTime.
-     * Vive en el servicio y no en la vista para que la regla de formato sea una
-     * sola en todo el sistema.
+     * Convierte texto "HH:mm" a LocalTime. Vive aquí para que la regla de
+     * formato sea única en todo el sistema.
      */
     public static LocalTime interpretarHora(String texto, String campo)
             throws ExcepcionValidacion {
@@ -371,7 +327,7 @@ public class ServicioMedicos {
         }
     }
 
-    /** Da formato "HH:mm" a una hora, o cadena vacia si es nula. */
+    /** Da formato "HH:mm"; cadena vacía si es nula. */
     public static String formatearHora(LocalTime hora) {
         return (hora == null) ? "" : hora.format(FORMATO_HORA);
     }

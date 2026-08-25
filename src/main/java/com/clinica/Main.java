@@ -52,9 +52,8 @@ public class Main {
             // La bitacora se arma primero: los tres servicios escriben en ella.
             ServicioBitacora servicioBitacora = new ServicioBitacora(archivoBitacora);
 
-            // Los servicios de medicos y pacientes reciben tambien el archivo de
-            // citas, que necesitan para las validaciones cruzadas (no borrar un
-            // paciente con citas, no dejar citas fuera del horario del medico).
+    // Los servicios reciben ArchivoCitas para validaciones cruzadas (no borrar
+    // paciente con citas activas, no dejar citas fuera del horario del médico).
             ServicioMedicos servicioMedicos =
                     new ServicioMedicos(archivoMedicos, archivoCitas, servicioBitacora);
             ServicioPacientes servicioPacientes =
@@ -63,7 +62,7 @@ public class Main {
                     new ServicioCitas(archivoCitas, archivoMedicos, archivoPacientes,
                             servicioBitacora);
 
-            // El servicio de reportes se apoya en los demas, no lee archivos.
+            // Reportes: se apoya en los demás servicios, no lee archivos.
             ServicioReportes servicioReportes = new ServicioReportes(
                     servicioMedicos, servicioPacientes, servicioCitas, servicioBitacora);
 

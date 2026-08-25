@@ -3,16 +3,10 @@ package com.clinica.modelo;
 import java.time.LocalTime;
 import java.util.UUID;
 
-/**
- * Representa a un medico de la clinica.
- *
- * Esta clase es un objeto de dominio puro: no sabe nada de archivos ni de la
- * interfaz grafica. Esa separacion es intencional (ver objetivo especifico 5
- * del enunciado): el modelo solo transporta datos entre las capas.
- */
+/** Dominio puro: transporta datos entre capas. Sin conocimiento de archivos ni UI. */
 public class Medico {
 
-    /** Identificador unico. Se genera automaticamente al registrar el medico. */
+    /** UUID generado por el sistema. */
     private UUID id;
 
     private String nombres;
@@ -20,17 +14,13 @@ public class Medico {
     private String especialidad;
     private String telefono;
 
-    /** Campo opcional segun el enunciado; puede quedar vacio. */
+    /** Opcional, puede quedar vacío. */
     private String correo;
 
     private LocalTime horaInicio;
     private LocalTime horaFin;
 
-    /**
-     * Estado del medico dentro de la clinica: activo o inactivo.
-     * OJO: no confundir con el byte de "registro vivo / registro borrado" que
-     * maneja la capa de persistencia. Son dos conceptos distintos.
-     */
+    /** Activo/inactivo en la clínica. No confundir con el byte vivo/borrado de persistencia. */
     private boolean activo;
 
     public Medico() {
@@ -122,7 +112,7 @@ public class Medico {
         this.activo = activo;
     }
 
-    /** Nombre completo, util para mostrarlo en las tablas de Swing. */
+    /** Nombre + apellidos para mostrar en tablas. */
     public String getNombreCompleto() {
         return nombres + " " + apellidos;
     }

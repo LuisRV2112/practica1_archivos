@@ -65,15 +65,10 @@ public final class ExportadorReportes {
         }
     }
 
-    // =======================================================================
-    // INTERNOS
-    // =======================================================================
+    // Internos
 
-    /**
-     * Abre el archivo en UTF-8 explicitamente. Sin indicar la codificacion, Java
-     * usaria la del sistema y las tildes se verian mal al abrir el CSV en otra
-     * maquina.
-     */
+    /** Abre archivo en UTF-8 explícito; sin indicarlo, las tildes se pierden
+     *  al abrir el CSV en otra máquina. */
     private static Writer abrir(File destino) throws IOException {
         File carpeta = destino.getParentFile();
         if (carpeta != null && !carpeta.exists() && !carpeta.mkdirs()) {
@@ -95,12 +90,8 @@ public final class ExportadorReportes {
     }
 
     /**
-     * Aplica las reglas del formato CSV: si el valor contiene una coma, una
-     * comilla o un salto de linea, se encierra entre comillas dobles y las
-     * comillas internas se duplican.
-     *
-     * Sin esto, un motivo de consulta como "dolor de cabeza, nauseas" partiria
-     * la fila en dos columnas al abrirla en Excel.
+     * Escapa CSV: si contiene coma, comilla o salto, se encierra entre comillas
+     * dobles y las internas se duplican.
      */
     private static String escaparCsv(String valor) {
         String texto = (valor == null) ? "" : valor;
@@ -116,7 +107,7 @@ public final class ExportadorReportes {
         return '"' + texto.replace("\"", "\"\"") + '"';
     }
 
-    /** Ancho de cada columna: el del texto mas largo que aparezca en ella. */
+    /** Ancho de cada columna: el del texto más largo en ella. */
     private static int[] calcularAnchos(Reporte reporte) {
         String[] columnas = reporte.getColumnas();
         int[] anchos = new int[columnas.length];

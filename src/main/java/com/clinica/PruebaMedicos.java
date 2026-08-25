@@ -8,11 +8,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Programa temporal de prueba. NO forma parte de la entrega final: sirve para
- * comprobar en consola que la capa de archivos funciona antes de construir la
- * interfaz de Swing encima.
- *
- * Ejecutalo dos veces seguidas: la segunda vez debe leer lo que dejo la primera.
+ * Prueba temporal de la capa de archivos (no es parte de la entrega). Ejecutar
+ * dos veces seguidas: la segunda debe leer lo que dejó la primera.
  */
 public class PruebaMedicos {
 
@@ -72,10 +69,7 @@ public class PruebaMedicos {
             System.out.println("Bytes desperdiciados en huecos: " + archivo.bytesDesperdiciados());
         }
 
-        // ------------------------------------------------------------------
-        // Segunda apertura: comprueba que los cambios quedaron en disco y que
-        // la lista de espacios libres reutiliza el hueco de un borrado.
-        // ------------------------------------------------------------------
+        // Segunda apertura: verifica persistencia y reutilización de huecos.
         System.out.println("\n=== Reabriendo el archivo (simula cerrar y volver a abrir la app) ===");
 
         try (ArchivoMedicos archivo = new ArchivoMedicos(RUTA)) {

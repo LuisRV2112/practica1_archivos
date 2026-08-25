@@ -1,11 +1,7 @@
 package com.clinica.modelo;
 
 /**
- * Tipo de sangre del paciente: los ocho grupos del sistema ABO/Rh.
- *
- * Igual que {@link Sexo}, cada constante guarda un codigo numerico fijo en vez
- * de depender de ordinal(), para que reordenar el enum no invalide los archivos
- * ya escritos.
+ * Tipo de sangre (8 grupos ABO/Rh). Código numérico fijo para no depender de ordinal().
  */
 public enum TipoSangre {
 
@@ -34,7 +30,7 @@ public enum TipoSangre {
         return etiqueta;
     }
 
-    /** Reconstruye el valor a partir del codigo guardado en el archivo. */
+    /** Reconstruye el enum desde el código guardado en archivo. */
     public static TipoSangre porCodigo(byte codigo) {
         for (TipoSangre valor : values()) {
             if (valor.codigo == codigo) {
@@ -44,7 +40,7 @@ public enum TipoSangre {
         throw new IllegalArgumentException("Codigo de tipo de sangre desconocido: " + codigo);
     }
 
-    /** Busca por la etiqueta visible ("O+", "AB-"), como llega desde la interfaz. */
+    /** Busca por etiqueta visible ("O+", "AB-"), como llega desde la UI. */
     public static TipoSangre porEtiqueta(String etiqueta) {
         for (TipoSangre valor : values()) {
             if (valor.etiqueta.equalsIgnoreCase(etiqueta)) {

@@ -18,29 +18,13 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Reglas de negocio del modulo de citas.
- *
- * Es el servicio mas complejo del sistema porque la cita no vive sola: relaciona
- * a un paciente con un medico, y hay que garantizar que esa relacion tenga
- * sentido antes de escribir nada en disco.
- *
- * Por eso recibe los tres archivos: el suyo y los de las entidades que
- * referencia. No recibe los OTROS SERVICIOS, sino sus archivos, y eso es
- * deliberado: si ServicioCitas dependiera de ServicioMedicos y ServicioMedicos
- * de ServicioCitas tendriamos una dependencia circular. Con esta disposicion
- * todos los servicios dependen solo de archivos, y los archivos no dependen de
- * nadie.
+ * Reglas de negocio de citas. Recibe los tres archivos de persistencia (el suyo
+ * y los de médicos y pacientes) para validar integridad referencial. Recibe
+ * archivos en vez de servicios para evitar dependencias circulares.
  */
 public class ServicioCitas {
 
-    /**
-     * Duracion asumida de una consulta, en minutos.
-     *
-     * El enunciado solo pide guardar la hora de inicio, pero sin una duracion no
-     * se puede saber si dos citas chocan. Se fija aqui un bloque estandar: dos
-     * citas del mismo medico se traslapan si sus intervalos de 30 minutos se
-     * solapan.
-     */
+    /** Duración estándar de una consulta en minutos. Se usa para validar traslapes. */
     public static final int DURACION_MINUTOS = 30;
 
     private final ArchivoCitas archivo;
@@ -58,9 +42,7 @@ public class ServicioCitas {
         this.bitacora = bitacora;
     }
 
-    // =======================================================================
-    // PROGRAMACION Y CAMBIOS DE ESTADO
-    // =======================================================================
+    // Programación y cambios de estado
 
     /**
      * Programa una cita nueva. Valida que el paciente y el medico existan, que
@@ -82,11 +64,8 @@ public class ServicioCitas {
         return id;
     }
 
-    /**
-     * Modifica unicamente el motivo y las observaciones, que es lo que permite
-     * cambiar el enunciado. Fecha, hora, paciente y medico no se tocan aqui:
-     * cambiarlos equivaldria a otra cita y habria que revalidar todo el cruce.
-     */
+    /** Modifica solo motivo y observaciones. El enunciado no permite cambiar
+     *  fecha/hora/paciente/médico (sería otra cita). */
     public void modificarMotivoYObservaciones(UUID idCita, String motivo, String observaciones)
             throws ExcepcionValidacion, IOException {
 
@@ -162,9 +141,7 @@ public class ServicioCitas {
                         : "del " + cita.getFecha() + " a las " + cita.getHoraInicio()));
     }
 
-    // =======================================================================
-    // CONSULTAS
-    // =======================================================================
+    // Consultas
 
     /** Listado completo, de la cita mas proxima a la mas lejana. */
     public List<Cita> listar() throws IOException {
@@ -180,11 +157,7 @@ public class ServicioCitas {
     }
 
     /**
-     * Citas de un paciente.
-     *
-     * No recorre el archivo completo: sigue el ANILLO DEL PACIENTE, leyendo
-     * unicamente los registros que le pertenecen. Con 10000 citas de las cuales
-     * 4 son suyas, se hacen 4 lecturas en lugar de 10000.
+     * Citas de un paciente: sigue el anillo del paciente, O(k) lecturas.
      */
     public List<Cita> listarPorPaciente(String identificacion) throws IOException {
         List<Cita> resultado = archivo.citasDelPaciente(normalizar(identificacion));
@@ -192,7 +165,7 @@ public class ServicioCitas {
         return resultado;
     }
 
-    /** Citas de un medico, siguiendo su anillo. Mismo razonamiento que el anterior. */
+    /** Citas de un médico, siguiendo su anillo. */
     public List<Cita> listarPorMedico(UUID idMedico) throws IOException {
         List<Cita> resultado = archivo.citasDelMedico(idMedico);
         ordenarPorFecha(resultado);
@@ -251,24 +224,15 @@ public class ServicioCitas {
         return archivo.cantidad();
     }
 
-    // =======================================================================
-    // CONSULTAS QUE USAN LOS OTROS MODULOS
-    // =======================================================================
+    // Consultas que usan otros módulos
 
-    /**
-     * Indica si un paciente tiene alguna cita registrada. Lo usa
-     * ServicioPacientes para impedir que se borre a alguien cuyas citas
-     * quedarian apuntando a un paciente inexistente.
-     */
+    /** ¿El paciente tiene citas registradas? Lo usa ServicioPacientes para
+     *  impedir borrados que dejarían citas huérfanas. */
     public boolean pacienteTieneCitas(String identificacion) throws IOException {
         return !listarPorPaciente(identificacion).isEmpty();
     }
 
-    /**
-     * Citas programadas de un medico que quedarian FUERA de un horario nuevo.
-     * Lo usa ServicioMedicos antes de guardar un cambio de horario, tal como
-     * pide el enunciado.
-     */
+    /** Citas fuera del horario nuevo de un médico; lo usa ServicioMedicos. */
     public List<Cita> citasFueraDeHorario(UUID idMedico, LocalTime nuevoInicio,
                                           LocalTime nuevoFin) throws IOException {
         List<Cita> conflictivas = new ArrayList<>();
@@ -288,16 +252,9 @@ public class ServicioCitas {
         return conflictivas;
     }
 
-    // =======================================================================
-    // VALIDACIONES
-    // =======================================================================
+    // Validaciones
 
-    /**
-     * Aplica todas las reglas antes de guardar. Se valida ANTES de tocar el
-     * archivo: si algo falla, el archivo queda intacto.
-     *
-     * @param esNueva true si la cita se esta programando por primera vez
-     */
+    /** Aplica todas las reglas antes de escribir en disco. */
     private void validar(Cita cita, boolean esNueva) throws ExcepcionValidacion, IOException {
         if (cita == null) {
             throw new ExcepcionValidacion("No hay datos de la cita.");
@@ -323,7 +280,7 @@ public class ServicioCitas {
             throw new ExcepcionValidacion("La hora de inicio es obligatoria.");
         }
 
-        // --- El paciente debe existir ---
+        // --- Paciente debe existir ---
         Paciente paciente = archivoPacientes.buscarPorId(cita.getIdentificacionPaciente());
         if (paciente == null) {
             throw new ExcepcionValidacion(
@@ -336,7 +293,7 @@ public class ServicioCitas {
                             + " esta dado de baja y no puede recibir citas nuevas.");
         }
 
-        // --- El medico debe existir y estar activo ---
+        // --- Médico debe existir y estar activo ---
         Medico medico = archivoMedicos.buscarPorId(cita.getIdMedico());
         if (medico == null) {
             throw new ExcepcionValidacion("El medico seleccionado ya no existe.");
@@ -347,12 +304,12 @@ public class ServicioCitas {
                             + " esta inactivo y no puede recibir citas.");
         }
 
-        // --- No se programan citas hacia atras en el tiempo ---
+        // --- Sin citas hacia atrás en el tiempo ---
         if (esNueva && cita.getFecha().isBefore(LocalDate.now())) {
             throw new ExcepcionValidacion("No se puede programar una cita en una fecha pasada.");
         }
 
-        // --- La cita debe caber dentro del horario de atencion del medico ---
+        // --- La cita debe caber en el horario del médico ---
         LocalTime inicioCita = cita.getHoraInicio();
         LocalTime finCita = inicioCita.plusMinutes(DURACION_MINUTOS);
 
@@ -365,7 +322,7 @@ public class ServicioCitas {
                             + " minutos no cabe en el horario indicado.");
         }
 
-        // --- El medico no puede tener dos citas traslapadas ---
+        // --- Sin traslapes del médico ---
         for (Cita otra : listarPorMedico(cita.getIdMedico())) {
             if (seTraslapan(cita, otra)) {
                 throw new ExcepcionValidacion(
@@ -376,7 +333,7 @@ public class ServicioCitas {
             }
         }
 
-        // --- El paciente tampoco puede estar en dos lugares a la vez ---
+        // --- Sin traslapes del paciente ---
         for (Cita otra : listarPorPaciente(cita.getIdentificacionPaciente())) {
             if (seTraslapan(cita, otra)) {
                 throw new ExcepcionValidacion(
@@ -386,13 +343,7 @@ public class ServicioCitas {
         }
     }
 
-    /**
-     * Dos citas se traslapan si son de dias iguales, ambas siguen programadas y
-     * sus bloques de {@link #DURACION_MINUTOS} minutos se solapan.
-     *
-     * La comparacion clasica de intervalos: [a1,a2) y [b1,b2) se solapan si
-     * a1 < b2 y b1 < a2.
-     */
+    /** Compara intervalos: [a1,a2) y [b1,b2) se solapan si a1 < b2 y b1 < a2. */
     private boolean seTraslapan(Cita nueva, Cita existente) {
         // Una cita no choca consigo misma (importa al reprogramar).
         if (existente.getId() != null && existente.getId().equals(nueva.getId())) {

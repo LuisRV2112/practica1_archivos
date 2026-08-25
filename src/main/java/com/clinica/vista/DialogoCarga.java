@@ -17,11 +17,8 @@ import java.awt.Dimension;
 import java.awt.Font;
 
 /**
- * Muestra el resultado de una carga masiva.
- *
- * Si todo entro bien basta un mensaje corto. Si hubo rechazos, se listan con su
- * numero de linea en un area desplazable: el usuario necesita saber QUE filas
- * corregir, no solo cuantas fallaron.
+ * Muestra el resultado de una carga masiva. Si hubo rechazos, lista las filas
+ * con error en un área desplazable para que el usuario sepa qué corregir.
  */
 public final class DialogoCarga {
 

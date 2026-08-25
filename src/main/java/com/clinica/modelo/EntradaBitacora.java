@@ -4,23 +4,19 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Una linea de la bitacora: quedo constancia de que alguien hizo algo, cuando y
- * sobre que modulo.
- *
- * La bitacora es de solo anexar: una entrada nunca se modifica ni se borra. Un
- * registro de auditoria que se puede editar no sirve como registro de auditoria.
+ * Línea de bitácora: registro append-only de quién hizo qué, cuándo y en qué módulo.
  */
 public class EntradaBitacora {
 
     private UUID id;
     private LocalDateTime momento;
 
-    /** Modulo afectado: "Medicos", "Pacientes", "Citas", "Reportes". */
+    /** Módulo afectado: "Medicos", "Pacientes", "Citas", "Reportes". */
     private String modulo;
 
     private TipoOperacion operacion;
 
-    /** Descripcion legible de lo que ocurrio. */
+    /** Descripción legible de lo ocurrido. */
     private String detalle;
 
     public EntradaBitacora() {

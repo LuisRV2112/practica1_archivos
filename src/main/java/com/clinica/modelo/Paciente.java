@@ -4,15 +4,12 @@ import java.time.LocalDate;
 import java.time.Period;
 
 /**
- * Representa a un paciente de la clinica.
- *
- * A diferencia del medico, el identificador NO es un UUID generado por el
- * sistema: es el numero de identificacion personal que trae la persona, y el
- * enunciado exige que sea unico. Por eso es un String y lo escribe el usuario.
+ * Dominio puro: transporta datos entre capas. El identificador es el número
+ * de identidad personal (String), no un UUID generado.
  */
 public class Paciente {
 
-    /** Numero de identificacion personal. Unico e inmutable una vez registrado. */
+    /** Número de identidad personal. Único e inmutable. */
     private String identificacion;
 
     private String nombres;
@@ -21,29 +18,21 @@ public class Paciente {
     private Sexo sexo;
     private String telefono;
 
-    /** Campo opcional segun el enunciado; puede quedar vacio. */
+    /** Opcional, puede quedar vacío. */
     private String correo;
 
     private TipoSangre tipoSangre;
 
     /**
-     * Estado del paciente en la clinica: activo o dado de baja.
-     *
-     * Este campo vive en el DOMINIO, no en la capa de persistencia. La
-     * diferencia no es cosmetica: el byte de "registro vivo / borrado" del
-     * archivo es un detalle de como se guardan los bytes, mientras que dar de
-     * baja a un paciente es un hecho del negocio que la clinica necesita
-     * consultar, filtrar y reportar. Por eso se modela aqui.
-     *
-     * Dar de baja es un borrado logico: el expediente se conserva y sus citas
-     * historicas siguen apuntando a un paciente que existe.
+     * Activo o dado de baja. Borrado lógico de dominio: el expediente se conserva
+     * para que sus citas históricas no queden huérfanas.
      */
     private boolean activo = true;
 
     public Paciente() {
     }
 
-    /** Constructor para un paciente nuevo, que nace activo. */
+    /** Constructor para paciente nuevo (nace activo). */
     public Paciente(String identificacion, String nombres, String apellidos,
                     LocalDate fechaNacimiento, Sexo sexo, String telefono,
                     String correo, TipoSangre tipoSangre) {
@@ -142,10 +131,9 @@ public class Paciente {
     }
 
     /**
-     * Edad cumplida a dia de hoy. Se calcula, no se guarda: almacenarla
-     * obligaria a recalcularla cada ano y quedaria desactualizada sola.
-     *
-     * @return la edad en anos, o -1 si no hay fecha de nacimiento
+     * Edad calculada a partir de la fecha de nacimiento. No se almacena para
+     * evitar tener que recalcularla cada año.
+     * @return edad en años, o -1 si no hay fecha
      */
     public int getEdad() {
         if (fechaNacimiento == null) {

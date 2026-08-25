@@ -6,25 +6,18 @@ import java.time.LocalTime;
 import java.util.UUID;
 
 /**
- * Representa una cita medica.
- *
- * La cita es la entidad que RELACIONA a las otras dos: guarda la identificacion
- * del paciente y el UUID del medico. No guarda copias de sus datos, solo las
- * referencias; los nombres se resuelven al momento de mostrarlos.
- *
- * Es la misma idea que una llave foranea en una base de datos, salvo que aqui
- * la integridad no la garantiza ningun motor: la valida la capa de servicio
- * antes de escribir.
+ * Cita médica. Relaciona paciente (identificación) con medico (UUID).
+ * Solo guarda referencias, no copias de datos.
  */
 public class Cita {
 
-    /** Identificador de la cita. Lo genera el sistema. */
+    /** UUID generado por el sistema. */
     private UUID id;
 
-    /** Referencia al paciente: su numero de identificacion personal. */
+    /** Identificación del paciente (referencia). */
     private String identificacionPaciente;
 
-    /** Referencia al medico: su UUID. */
+    /** UUID del medico (referencia). */
     private UUID idMedico;
 
     private LocalDate fecha;
@@ -112,10 +105,7 @@ public class Cita {
         this.observaciones = observaciones;
     }
 
-    /**
-     * Fecha y hora juntas. Sirve para comparar citas entre si y para saber si
-     * una cita ya paso.
-     */
+    /** Fecha + hora combinadas. Útil para comparar citas entre sí. */
     public LocalDateTime getInicio() {
         if (fecha == null || horaInicio == null) {
             return null;

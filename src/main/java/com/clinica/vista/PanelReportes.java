@@ -35,20 +35,14 @@ import java.io.IOException;
 import java.time.LocalDate;
 
 /**
- * Pantalla de reportes.
- *
- * Un unico panel atiende los quince reportes del enunciado, porque todos
- * devuelven la misma estructura generica. Lo que cambia entre uno y otro son los
- * parametros que necesita, y eso se resuelve con un CardLayout: se muestra solo
- * el grupo de controles que corresponde al reporte elegido.
+ * Pantalla de reportes. Un solo panel para los 15 reportes del enunciado: todos
+ * devuelven la misma estructura genérica (Reporte). CardLayout muestra solo los
+ * controles del reporte elegido.
  */
 public class PanelReportes extends JPanel {
 
-    /**
-     * Catalogo de reportes. Cada uno declara su nombre y que tarjeta de
-     * parametros necesita, de modo que agregar un reporte nuevo es agregar una
-     * constante aqui y un caso en generar().
-     */
+    /** Catálogo de reportes. Agregar uno nuevo = agregar constante + caso en
+     *  generar(). */
     private enum TipoReporte {
         PACIENTES_COMPLETO("Pacientes - listado completo", "ninguno"),
         PACIENTES_POR_SANGRE("Pacientes - por tipo de sangre", "sangre"),
@@ -135,9 +129,7 @@ public class PanelReportes extends JPanel {
         mostrarParametrosDe((TipoReporte) cboReporte.getSelectedItem());
     }
 
-    // =======================================================================
-    // CONSTRUCCION DE LA INTERFAZ
-    // =======================================================================
+    // Construcción de la interfaz
 
     private JPanel construirBarraSuperior() {
         JPanel barra = new JPanel(new BorderLayout(6, 6));
@@ -188,9 +180,7 @@ public class PanelReportes extends JPanel {
         return panel;
     }
 
-    // =======================================================================
-    // EVENTOS
-    // =======================================================================
+    // Eventos
 
     private void conectarEventos() {
         cboReporte.addActionListener(e -> {
@@ -209,9 +199,7 @@ public class PanelReportes extends JPanel {
         }
     }
 
-    // =======================================================================
-    // GENERACION
-    // =======================================================================
+    // Generación
 
     private void generar() {
         TipoReporte tipo = (TipoReporte) cboReporte.getSelectedItem();
@@ -280,9 +268,7 @@ public class PanelReportes extends JPanel {
         return valor;
     }
 
-    // =======================================================================
-    // EXPORTACION
-    // =======================================================================
+    // Exportación
 
     private void exportar(boolean comoCsv) {
         Reporte reporte = modeloTabla.getReporte();
@@ -351,9 +337,7 @@ public class PanelReportes extends JPanel {
         return base.isEmpty() ? "reporte" : base;
     }
 
-    // =======================================================================
-    // AUXILIARES
-    // =======================================================================
+    // Auxiliares
 
     /** Vuelve a llenar los combos. Lo usa la carga masiva al terminar. */
     public void recargar() {

@@ -1,11 +1,7 @@
 package com.clinica.modelo;
 
 /**
- * Estados permitidos para una cita, segun el enunciado.
- *
- * Igual que {@link Sexo} y {@link TipoSangre}, cada constante guarda un codigo
- * numerico fijo en lugar de depender de ordinal(), para que reordenar el enum
- * no invalide los archivos ya escritos.
+ * Estados de una cita. Código numérico fijo para no depender de ordinal().
  */
 public enum EstadoCita {
 
@@ -29,7 +25,7 @@ public enum EstadoCita {
         return etiqueta;
     }
 
-    /** Reconstruye el valor a partir del codigo guardado en el archivo. */
+    /** Reconstruye el enum desde el código guardado en archivo. */
     public static EstadoCita porCodigo(byte codigo) {
         for (EstadoCita valor : values()) {
             if (valor.codigo == codigo) {

@@ -20,12 +20,8 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 
 /**
- * Calendario emergente para elegir una fecha.
- *
- * Esta escrito con componentes de Swing puros (JButton, JPanel, GridLayout).
- * No se usa ninguna libreria externa de calendarios: el enunciado exige que la
- * interfaz sea Java Swing, y agregar una dependencia solo para esto
- * complicaria el empaquetado del JAR sin necesidad.
+ * Calendario emergente en Swing puro (sin dependencias externas). Devuelve la
+ * fecha elegida o null si se cierra sin seleccionar.
  */
 public class SelectorFecha extends JDialog {
 
@@ -82,9 +78,7 @@ public class SelectorFecha extends JDialog {
         return dialogo.seleccionada;
     }
 
-    // =======================================================================
-    // CONSTRUCCION
-    // =======================================================================
+    // Construcción
 
     private JPanel construirEncabezado() {
         JPanel encabezado = new JPanel();
@@ -135,11 +129,8 @@ public class SelectorFecha extends JDialog {
     }
 
     /**
-     * Redibuja la cuadricula del mes.
-     *
-     * La clave esta en calcular cuantas casillas vacias van antes del dia 1:
-     * si el mes empieza en miercoles, hay que dejar tres huecos para que los
-     * numeros caigan bajo la columna correcta.
+     * Redibuja la cuadrícula. Las casillas vacías antes del día 1 alinean los
+     * números bajo la columna correcta.
      */
     private void dibujarDias() {
         panelDias.removeAll();

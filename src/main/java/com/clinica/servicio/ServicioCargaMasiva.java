@@ -18,20 +18,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Carga masiva de informacion desde archivos CSV.
- *
- * ---------------------------------------------------------------------------
- * DECISION IMPORTANTE
- * ---------------------------------------------------------------------------
- * Esta clase NO escribe en los archivos por su cuenta: arma los objetos y se
- * los pasa a los servicios de siempre. Eso significa que un registro cargado
- * desde CSV pasa por EXACTAMENTE las mismas validaciones que uno tecleado a
- * mano: identificaciones unicas, horarios coherentes, medicos activos, citas
- * sin traslape.
- *
- * Si la carga escribiera directo en los archivos seria mas rapida, pero seria
- * una puerta trasera para meter datos invalidos y corromper la consistencia que
- * el resto del sistema cuida.
+ * Carga masiva desde CSV. Arma objetos y los pasa a los servicios de siempre,
+ * de modo que cada fila pasa por las mismas validaciones que si se tecleara a
+ * mano (identificaciones únicas, horarios coherentes, sin traslapes, etc.).
  */
 public class ServicioCargaMasiva {
 
@@ -50,9 +39,7 @@ public class ServicioCargaMasiva {
         this.bitacora = bitacora;
     }
 
-    // =======================================================================
-    // MEDICOS
-    // =======================================================================
+    // Médicos
 
     /**
      * Columnas esperadas:
@@ -106,9 +93,7 @@ public class ServicioCargaMasiva {
         return resultado;
     }
 
-    // =======================================================================
-    // PACIENTES
-    // =======================================================================
+    // Pacientes
 
     /**
      * Columnas esperadas:
@@ -159,19 +144,9 @@ public class ServicioCargaMasiva {
         return resultado;
     }
 
-    // =======================================================================
-    // CITAS
-    // =======================================================================
+    // Citas
 
-    /**
-     * Columnas esperadas:
-     * identificacionPaciente, medico, fecha, hora, motivo, observaciones
-     *
-     * La columna "medico" admite el codigo completo del medico o su nombre y
-     * apellidos. El nombre es mucho mas comodo de escribir a mano, pero exige
-     * que sea inequivoco: si hay dos medicos que se llaman igual, la fila se
-     * rechaza en lugar de adivinar.
-     */
+    /** La columna "medico" admite UUID o nombre completo (debe ser inequívoco). */
     public ResultadoCarga cargarCitas(File archivo) throws IOException {
         ResultadoCarga resultado = new ResultadoCarga("citas");
         List<String[]> filas = LectorCsv.leer(archivo);
@@ -222,14 +197,9 @@ public class ServicioCargaMasiva {
         return resultado;
     }
 
-    // =======================================================================
-    // PLANTILLAS
-    // =======================================================================
+    // Plantillas
 
-    /**
-     * Escribe tres archivos de ejemplo con el encabezado y una fila de muestra,
-     * para que el usuario sepa que columnas van y en que orden.
-     */
+    /** Escribe tres plantillas de ejemplo con encabezado y una fila de muestra. */
     public void generarPlantillas(File carpeta) throws IOException {
         escribir(new File(carpeta, "plantilla_medicos.csv"), """
                 nombres,apellidos,especialidad,telefono,correo,horaInicio,horaFin,activo
@@ -259,15 +229,9 @@ public class ServicioCargaMasiva {
         }
     }
 
-    // =======================================================================
-    // INTERPRETACION DE CAMPOS
-    // =======================================================================
+    // Interpretación de campos
 
-    /**
-     * Busca al medico por codigo o por nombre completo.
-     *
-     * @throws ExcepcionValidacion si no existe o si el nombre es ambiguo
-     */
+    /** Busca médico por UUID o por nombre completo; lanza si es ambiguo. */
     private UUID resolverMedico(String valor, List<Medico> medicos)
             throws ExcepcionValidacion {
 
@@ -276,7 +240,7 @@ public class ServicioCargaMasiva {
             throw new ExcepcionValidacion("falta el medico");
         }
 
-        // Primero se intenta como codigo, que es inequivoco.
+        // Primero intenta como UUID (inequívoco).
         try {
             UUID id = UUID.fromString(buscado);
             for (Medico m : medicos) {

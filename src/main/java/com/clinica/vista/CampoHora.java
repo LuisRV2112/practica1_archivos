@@ -7,16 +7,8 @@ import java.util.Calendar;
 import java.util.Date;
 
 /**
- * Campo para capturar una hora, con flechas para subir y bajar.
- *
- * Se apoya en JSpinner con un editor de fecha limitado a "HH:mm". La ventaja
- * frente a un campo de texto libre es que el componente NO PERMITE construir
- * una hora invalida: al llegar a 23:59 vuelve a 00:00 y no acepta letras. Toda
- * una familia de errores de captura desaparece de raiz.
- *
- * Internamente JSpinner trabaja con java.util.Date porque SpinnerDateModel es
- * anterior a java.time. Esta clase encapsula esa conversion para que el resto
- * del sistema siga hablando unicamente de LocalTime.
+ * Campo de hora con flechas subir/bajar. Encapsula la conversión Date↔LocalTime
+ * que JSpinner requiere (SpinnerDateModel es anterior a java.time).
  */
 public class CampoHora extends JSpinner {
 
@@ -27,8 +19,7 @@ public class CampoHora extends JSpinner {
     public CampoHora(LocalTime inicial) {
         super(new SpinnerDateModel());
 
-        // El campo de minutos es el que cambian las flechas: subir de 30 pasa a
-        // 31, no a la hora siguiente. Es lo que se espera al agendar.
+        // El editor cambia minutos por flechas, no horas.
         setEditor(new JSpinner.DateEditor(this, "HH:mm"));
         setHora(inicial);
 

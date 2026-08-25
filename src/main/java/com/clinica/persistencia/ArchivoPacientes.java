@@ -8,43 +8,13 @@ import java.io.IOException;
 import java.time.LocalDate;
 
 /**
- * Persistencia de pacientes: ARCHIVO DIRECTO (acceso por hash).
+ * Persistencia de pacientes: archivo directo (hash O(1)).
+ * La posición se calcula con función de dispersión sobre la identificación.
  *
- * ---------------------------------------------------------------------------
- * POR QUE ESTA ORGANIZACION
- * ---------------------------------------------------------------------------
- * Al paciente casi siempre se le busca por su numero de identificacion, y se le
- * busca EXACTO: llega a la clinica, da su numero y hay que traer su expediente.
- * No se consulta "los pacientes entre el numero X y el Y", ni hace falta
- * recorrerlos en orden de identificacion.
- *
- * Ese patron —clave exacta, muchas consultas, sin necesidad de orden— es
- * exactamente para lo que sirve un archivo directo: la posicion del registro se
- * CALCULA a partir de la clave mediante una funcion de dispersion, y se llega a
- * el en una sola lectura. Buscar un paciente cuesta O(1) sin importar si hay
- * cien o cien mil.
- *
- * El indice hash vive en un archivo aparte (pacientes.hash); ver
- * {@link IndiceHash} para el detalle de colisiones, lapidas y redispersion.
- *
- * ---------------------------------------------------------------------------
- * REGISTRO DE PACIENTE: 336 bytes
- * ---------------------------------------------------------------------------
- *      byte estadoRegistro     (1)    de la clase base
- *      int  siguienteLibre     (4)    de la clase base
- *      char[15] identificacion (30)   numero de identificacion personal
- *      char[40] nombres        (80)
- *      char[40] apellidos      (80)
- *      long fechaNacimiento    (8)    dias desde 1970-01-01
- *      byte sexo               (1)    codigo del enum Sexo
- *      char[15] telefono       (30)
- *      char[50] correo         (100)
- *      byte tipoSangre         (1)    codigo del enum TipoSangre
- *      byte activo             (1)    estado del paciente en la clinica
- *
- * El identificador no es un UUID generado sino el numero de identidad que trae
- * la persona. Su unicidad la garantiza el indice, que rechaza una clave
- * repetida antes de escribir nada.
+ * Registro de 336 bytes:
+ *   estadoRegistro(1) + siguienteLibre(4) + identificacion(30) + nombres(80) +
+ *   apellidos(80) + fechaNacimiento(8) + sexo(1) + telefono(30) +
+ *   correo(100) + tipoSangre(1) + activo(1)
  */
 public class ArchivoPacientes extends ArchivoBase<String, Paciente> {
 
@@ -87,17 +57,11 @@ public class ArchivoPacientes extends ArchivoBase<String, Paciente> {
         return "Directo (acceso por hash)";
     }
 
-    // =======================================================================
-    // ORGANIZACION: ARCHIVO DIRECTO
-    // =======================================================================
+    // Organización: archivo directo (hash)
 
     /**
-     * Verifica que el indice concuerde con el archivo de datos y, si no, lo
-     * reconstruye recorriendo los registros una sola vez.
-     *
-     * Un indice es informacion DERIVADA: siempre se puede volver a calcular a
-     * partir de los datos. Por eso, si el programa se cerro de golpe y el
-     * indice quedo a medias, no se pierde nada: se rehace.
+     * Verifica el índice contra el archivo y lo reconstruye si no coincide.
+     * El índice es información derivada: siempre se puede recalcular.
      */
     @Override
     protected void prepararIndice() throws IOException {
@@ -116,7 +80,7 @@ public class ArchivoPacientes extends ArchivoBase<String, Paciente> {
         }
     }
 
-    /** Se calcula la posicion con la funcion de dispersion: O(1). */
+    /** Posición calculada con hash: O(1). */
     @Override
     protected Integer localizar(String identificacion) throws IOException {
         return indice.buscar(identificacion);
@@ -139,19 +103,17 @@ public class ArchivoPacientes extends ArchivoBase<String, Paciente> {
         indice.close();
     }
 
-    /** Capacidad actual de la tabla hash, para el reporte tecnico. */
+    /** Capacidad actual de la tabla hash; para reporte técnico. */
     public int capacidadIndice() {
         return indice.getCapacidad();
     }
 
-    /** Ocupacion de la tabla hash, entre 0 y 1. */
+    /** Factor de ocupación de la tabla hash (0.0 - 1.0). */
     public double factorCargaIndice() {
         return indice.factorCarga();
     }
 
-    // =======================================================================
-    // FORMATO DE LOS CAMPOS
-    // =======================================================================
+    // Formato de campos
 
     @Override
     protected String idDe(Paciente paciente) {
@@ -165,7 +127,6 @@ public class ArchivoPacientes extends ArchivoBase<String, Paciente> {
 
     @Override
     protected void escribirCampos(Paciente paciente) throws IOException {
-        // El identificador va primero, como en todos los archivos.
         UtilArchivo.escribirCadena(archivo, paciente.getIdentificacion(), LARGO_IDENTIFICACION);
 
         UtilArchivo.escribirCadena(archivo, paciente.getNombres(), LARGO_NOMBRES);
@@ -173,7 +134,6 @@ public class ArchivoPacientes extends ArchivoBase<String, Paciente> {
 
         UtilArchivo.escribirFecha(archivo, paciente.getFechaNacimiento());
 
-        // Se guarda el codigo del enum, no su ordinal: ver comentario en Sexo.
         archivo.writeByte(paciente.getSexo() == null ? 0 : paciente.getSexo().getCodigo());
 
         UtilArchivo.escribirCadena(archivo, paciente.getTelefono(), LARGO_TELEFONO);
@@ -187,7 +147,7 @@ public class ArchivoPacientes extends ArchivoBase<String, Paciente> {
 
     @Override
     protected Paciente leerCampos() throws IOException {
-        // El orden de lectura debe ser EXACTAMENTE el mismo de escribirCampos.
+        // Orden de lectura = orden de escritura en escribirCampos.
         String identificacion = leerId();
 
         String nombres = UtilArchivo.leerCadena(archivo, LARGO_NOMBRES);

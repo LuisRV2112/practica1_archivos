@@ -18,13 +18,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Genera los reportes que pide el enunciado.
- *
- * Todos devuelven un {@link Reporte}, una tabla generica de texto. Gracias a eso
- * la pantalla de reportes y el exportador a CSV son uno solo para los quince.
- *
- * Este servicio no lee archivos por su cuenta: le pide los datos a los otros
- * servicios, que ya aplican su propio orden y sus reglas.
+ * Genera los reportes del enunciado como objetos Reporte (tabla genérica).
+ * Un solo tipo de pantalla y exportador sirven para los quince reportes.
+ * No lee archivos: pide datos a los otros servicios.
  */
 public class ServicioReportes {
 
@@ -43,9 +39,7 @@ public class ServicioReportes {
         this.servicioBitacora = servicioBitacora;
     }
 
-    // =======================================================================
-    // REPORTES DE PACIENTES
-    // =======================================================================
+    // Reportes de pacientes
 
     public Reporte pacientesCompleto() throws IOException {
         Reporte reporte = new Reporte("Reporte completo de pacientes",
@@ -83,10 +77,7 @@ public class ServicioReportes {
         return reporte;
     }
 
-    /**
-     * Pacientes ordenados por cantidad de citas, de mayor a menor.
-     * Solo aparecen quienes tienen al menos una.
-     */
+    /** Pacientes ordenados por cantidad de citas, de mayor a menor. */
     public Reporte pacientesConMasCitas() throws IOException {
         Map<String, Integer> conteo = new HashMap<>();
         for (Cita c : servicioCitas.listar()) {
@@ -138,9 +129,7 @@ public class ServicioReportes {
         return reporte;
     }
 
-    // =======================================================================
-    // REPORTES DE MEDICOS
-    // =======================================================================
+    // Reportes de médicos
 
     public Reporte medicosCompleto() throws IOException {
         Reporte reporte = new Reporte("Reporte completo de medicos",
@@ -237,9 +226,7 @@ public class ServicioReportes {
         return reporte;
     }
 
-    // =======================================================================
-    // REPORTES DE CITAS
-    // =======================================================================
+    // Reportes de citas
 
     public Reporte citasCompleto() throws IOException {
         return construirReporteDeCitas("Reporte completo de citas", servicioCitas.listar());
@@ -270,7 +257,7 @@ public class ServicioReportes {
                 servicioCitas.listarPorEstado(estado));
     }
 
-    /** Cuantas citas ha recibido cada especialidad. */
+    /** Cuántas citas ha recibido cada especialidad. */
     public Reporte citasPorEspecialidad() throws IOException {
         Map<UUID, Medico> medicos = mapaMedicos();
         Map<String, Integer> conteo = new HashMap<>();
@@ -293,9 +280,7 @@ public class ServicioReportes {
         return reporte;
     }
 
-    // =======================================================================
-    // REPORTE DE BITACORA
-    // =======================================================================
+    // Reporte de bitácora
 
     public Reporte bitacora() throws IOException {
         Reporte reporte = new Reporte("Bitacora de operaciones",
@@ -311,14 +296,10 @@ public class ServicioReportes {
         return reporte;
     }
 
-    // =======================================================================
-    // AUXILIARES
-    // =======================================================================
+    // Auxiliares
 
-    /**
-     * Arma la tabla de un listado de citas resolviendo los nombres de paciente y
-     * medico. Los diccionarios se construyen UNA vez y no una por fila.
-     */
+    /** Arma tabla de citas resolviendo nombres de paciente/médico. Los mapas se
+     *  construyen una vez (no una por fila). */
     private Reporte construirReporteDeCitas(String titulo, List<Cita> citas) throws IOException {
         Map<String, Paciente> pacientes = mapaPacientes();
         Map<UUID, Medico> medicos = mapaMedicos();
@@ -361,7 +342,7 @@ public class ServicioReportes {
         return mapa;
     }
 
-    /** Convierte a texto cualquier valor que pueda ser nulo. */
+    /** Convierte a texto cualquier valor; nulo → cadena vacía. */
     private static String texto(Object valor) {
         return (valor == null) ? "" : valor.toString();
     }

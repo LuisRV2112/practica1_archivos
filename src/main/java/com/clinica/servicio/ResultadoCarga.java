@@ -4,14 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Resumen de una carga masiva: cuantos registros entraron, cuantos se
- * rechazaron y por que.
- *
- * La carga NO se detiene ante el primer error ni se deshace por completo: cada
- * fila se procesa por separado, las validas entran y las invalidas se reportan
- * con su numero de linea. Un archivo de 200 pacientes con una fecha mal escrita
- * en la fila 87 carga 199 y le dice al usuario exactamente que corregir, en
- * lugar de rechazarlo entero sin explicacion.
+ * Resumen de una carga masiva: insertados, rechazados y errores por línea.
+ * La carga no se detiene ante el primer error: cada fila se procesa por
+ * separado; las válidas entran y las inválidas se reportan con su número de
+ * línea para que el usuario sepa exactamente qué corregir.
  */
 public class ResultadoCarga {
 
@@ -28,8 +24,8 @@ public class ResultadoCarga {
     }
 
     /**
-     * @param numeroLinea numero de linea del archivo, contando desde 1, para
-     *                    que el usuario pueda ir directo a corregirla
+     * Registra un error con número de línea (desde 1) para que el usuario vaya
+     * directo a corregirlo.
      */
     public void agregarError(int numeroLinea, String motivo) {
         errores.add("Linea " + numeroLinea + ": " + motivo);

@@ -27,12 +27,9 @@ import java.awt.event.WindowEvent;
 import java.io.IOException;
 
 /**
- * Ventana principal de la aplicacion. Cada modulo del enunciado ocupa una
- * pestana.
- *
- * Tambien se encarga de cerrar los archivos al salir: RandomAccessFile mantiene
- * un descriptor abierto del sistema operativo, y dejarlo sin cerrar puede hacer
- * que los ultimos datos escritos no lleguen a disco.
+ * Ventana principal. Cada módulo ocupa una pestaña. Cierra archivos al salir
+ * para que los últimos escritos lleguen a disco (RandomAccessFile mantiene un
+ * descriptor del SO abierto).
  */
 public class VentanaPrincipal extends JFrame {
 
@@ -87,14 +84,6 @@ public class VentanaPrincipal extends JFrame {
         });
     }
 
-    /**
-     * Cierra todos los archivos abiertos antes de terminar. Se intenta cerrar
-     * cada uno aunque otro falle, para no dejar descriptores colgando.
-     */
-    // =======================================================================
-    // MENU DE CARGA MASIVA
-    // =======================================================================
-
     private JMenuBar construirMenu() {
         JMenuBar barra = new JMenuBar();
 
@@ -129,11 +118,7 @@ public class VentanaPrincipal extends JFrame {
     }
 
     /**
-     * Pide el archivo y ejecuta la carga.
-     *
-     * El orden en que se cargan importa: una cita necesita que su paciente y su
-     * medico ya existan. Por eso el menu los lista en ese orden y el aviso lo
-     * recuerda si la carga de citas falla entera.
+     * Carga CSV. El orden importa: médicos y pacientes antes de citas.
      */
     private void cargar(String entidad) {
         JFileChooser selector = new JFileChooser();

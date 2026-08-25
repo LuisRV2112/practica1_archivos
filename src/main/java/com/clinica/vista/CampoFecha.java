@@ -12,17 +12,9 @@ import java.text.ParseException;
 import java.time.LocalDate;
 
 /**
- * Campo para capturar una fecha, con dos formas de llenarlo:
- *
- *   1. Escribiendola. El campo trae una MASCARA fija __/__/____ , asi que las
- *      barras ya estan puestas y el usuario solo teclea los ocho digitos. La
- *      mascara ademas impide escribir letras.
- *
- *   2. Eligiendola del calendario que abre el boton de la derecha.
- *
- * El componente NO valida la fecha: devuelve el texto tal cual para que lo
- * revise la capa de servicio. Asi la regla de que 31/02 no existe vive en un
- * solo lugar del sistema y no se duplica en cada pantalla.
+ * Campo de fecha con máscara __/__/____ y botón de calendario emergente.
+ * No valida la fecha: devuelve el texto para que lo revise la capa de servicio
+ * (regla de que 31/02 no existe vive en un solo lugar).
  */
 public class CampoFecha extends JPanel {
 
@@ -47,12 +39,8 @@ public class CampoFecha extends JPanel {
     }
 
     /**
-     * Crea el campo con la mascara de fecha.
-     *
-     * MaskFormatter puede lanzar ParseException si el patron esta mal escrito.
-     * Como el patron es una constante del codigo y no algo que venga de fuera,
-     * un fallo aqui seria un error de programacion, no del usuario: por eso se
-     * cae de inmediato en lugar de disimularlo.
+     * Crea el campo con máscara. Si el patrón falla (error de programación),
+     * se lanza IllegalStateException de inmediato.
      */
     private static JFormattedTextField crearCampoConMascara() {
         try {
@@ -79,16 +67,11 @@ public class CampoFecha extends JPanel {
         }
     }
 
-    // =======================================================================
-    // API DEL COMPONENTE
-    // =======================================================================
+    // API del componente
 
     /**
-     * Texto capturado, listo para que lo interprete la capa de servicio.
-     *
-     * Si el usuario no lleno nada, la mascara deja "__/__/____". Se devuelve
-     * cadena vacia en ese caso para que el servicio responda "la fecha es
-     * obligatoria" en lugar de "el formato es invalido", que confundiria.
+     * Texto capturado. Si la máscara quedó incompleta devuelve vacío para que
+     * el servicio diga "obligatoria" en vez de "formato inválido".
      */
     public String getTexto() {
         String texto = campo.getText();

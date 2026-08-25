@@ -8,65 +8,29 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Base comun a todos los archivos de registros de longitud fija.
+ * Base para archivos de registros de longitud fija.
  *
- * ---------------------------------------------------------------------------
- * QUE APORTA ESTA CLASE
- * ---------------------------------------------------------------------------
- * La MECANICA de almacenamiento, que es identica para todas las entidades:
- * cabecera, registros del mismo tamano, borrado logico, apilo de espacios
- * libres y calculo de posiciones por aritmetica de bytes.
+ * Aporta la mecánica (cabecera, borrado lógico, apilo de espacios libres,
+ * cálculo de posiciones por aritmética de bytes).
+ * No aporta la organización: eso lo decide cada subclase.
  *
- * ---------------------------------------------------------------------------
- * QUE NO APORTA (y es lo importante)
- * ---------------------------------------------------------------------------
- * La ORGANIZACION, es decir, COMO se localiza un registro a partir de su
- * identificador. Eso lo decide cada subclase segun como se consulte esa
- * entidad, y es lo que diferencia una estructura de archivo de otra:
+ * Estructura del archivo:
+ *   [ Cabecera 12 bytes ][ registro 0 ][ registro 1 ] ...
  *
- *   - Pacientes -> archivo DIRECTO: un indice hash externo calcula la
- *                  posicion. Busqueda O(1).
- *   - Medicos   -> archivo SECUENCIAL INDEXADO: un archivo de indice ordenado
- *                  se recorre con busqueda binaria. Busqueda O(log n).
- *   - Citas     -> archivo MULTIANILLO: cada registro se encadena con los
- *                  demas de su mismo medico y de su mismo paciente.
- *   - Bitacora  -> archivo SECUENCIAL puro: solo se anexa y se lee entero,
- *                  asi que usa la implementacion por omision (barrido O(n)).
+ *   Cabecera: version(4) + cantidadActivos(4) + primerLibre(4)
+ *   Registro: estadoRegistro(1) + siguienteLibre(4) + campos propios
  *
- * Por omision, localizar() hace un barrido secuencial. Una subclase que no
- * sobrescriba nada obtiene un archivo secuencial, que es justo lo que conviene
- * a la bitacora.
- *
- * ---------------------------------------------------------------------------
- * ESTRUCTURA DEL ARCHIVO DE DATOS
- * ---------------------------------------------------------------------------
- *
- *  [ CABECERA: 12 bytes ][ registro 0 ][ registro 1 ][ registro 2 ] ...
- *
- *  Cabecera:
- *      int version          (4)  version del formato
- *      int cantidadActivos  (4)  registros vivos
- *      int primerLibre      (4)  cima del apilo de huecos, o -1
- *
- *  Todo registro empieza igual:
- *      byte estadoRegistro  (1)  1 = ocupado, 0 = borrado
- *      int  siguienteLibre  (4)  enlaza el apilo cuando el registro esta libre
- *      ...luego los campos propios, EMPEZANDO POR EL IDENTIFICADOR...
- *
- * Que el identificador sea siempre el primer campo del cuerpo permite leer solo
- * los primeros bytes de un registro para saber a quien pertenece, sin cargarlo
- * completo. De eso se aprovechan tanto el barrido secuencial como la
- * reconstruccion de los indices.
+ * El identificador siempre es el primer campo del cuerpo para permitir
+ * leer solo los primeros bytes y reconstruir índices.
  *
  * @param <ID> tipo del identificador
- * @param <T>  tipo de la entidad almacenada
+ * @param <T>  tipo de la entidad
  */
 public abstract class ArchivoBase<ID, T> implements Closeable {
 
     /**
-     * Version del formato. Se sube cada vez que cambia la disposicion de los
-     * bytes, para que el sistema RECHACE un archivo viejo en lugar de leerlo
-     * mal y mostrar datos corruptos.
+     * Versión del formato. Se sube al cambiar la disposición de bytes para que
+     * el sistema rechace archivos viejos en vez de leerlos mal.
      *
      *   v2: distintas organizaciones de archivo y campo "activo" del paciente
      *   v3: enlaces de anillo en el registro de cita (multianillo)
@@ -75,13 +39,13 @@ public abstract class ArchivoBase<ID, T> implements Closeable {
 
     private static final int TAM_CABECERA = Integer.BYTES * 3;
 
-    /** Bytes comunes al inicio de cualquier registro: estado + siguienteLibre. */
+    /** Bytes comunes al inicio de cada registro: estado(1) + siguienteLibre(4). */
     protected static final int TAM_ENCABEZADO_REGISTRO = Byte.BYTES + Integer.BYTES;
 
     protected static final byte REGISTRO_LIBRE = 0;
     protected static final byte REGISTRO_OCUPADO = 1;
 
-    /** Archivo de datos abierto. Las subclases lo usan para sus campos. */
+    /** Archivo de datos abierto. Lo usan las subclases para sus campos. */
     protected final RandomAccessFile archivo;
 
     private final int tamRegistro;
@@ -110,24 +74,19 @@ public abstract class ArchivoBase<ID, T> implements Closeable {
     }
 
     /**
-     * Debe llamarse al final del constructor de la subclase, cuando sus propios
-     * campos ya estan inicializados. Prepara la organizacion concreta (abrir o
-     * reconstruir el indice, rearmar los anillos, etc.).
+     * Llamar al final del constructor de la subclase. Prepara la organización
+     * concreta (abrir índice, reconstruir anillos, etc.).
      *
-     * No se hace desde el constructor de esta clase a proposito: en Java, el
-     * constructor de la clase base se ejecuta ANTES de que se inicialicen los
-     * campos de la subclase, asi que un indice creado aqui aparecería como null
-     * al usarlo.
+     * No se hace aquí porque en Java el constructor de la base se ejecuta
+     * ANTES de que existan los campos de la subclase.
      */
     protected final void iniciarOrganizacion() throws IOException {
         prepararIndice();
     }
 
-    // =======================================================================
-    // LO QUE CADA SUBCLASE DEBE DEFINIR: EL FORMATO DE SUS CAMPOS
-    // =======================================================================
+    // Formato de campos (cada subclase define)
 
-    /** Escribe los campos propios. El PRIMERO debe ser el identificador. */
+    /** Escribe campos propios. El PRIMERO debe ser el identificador. */
     protected abstract void escribirCampos(T objeto) throws IOException;
 
     /** Lee los campos propios desde la posicion actual. */
@@ -139,25 +98,21 @@ public abstract class ArchivoBase<ID, T> implements Closeable {
     /** Identificador de una entidad ya construida. */
     protected abstract ID idDe(T objeto);
 
-    /** Oportunidad de preparar la entidad antes de insertar (generar un UUID). */
+    /** Oportunidad de preparar antes de insertar (generar UUID, etc.). */
     protected void prepararParaInsertar(T objeto) {
         // Las subclases que lo necesiten sobrescriben este metodo.
     }
 
-    // =======================================================================
-    // LO QUE CADA SUBCLASE PUEDE REDEFINIR: LA ORGANIZACION
-    // =======================================================================
+    // Organización (cada subclase redefine según necesidad)
 
-    /** Abre o reconstruye las estructuras de apoyo. Por omision no hay ninguna. */
+    /** Abre o reconstruye estructuras de apoyo. Por defecto no hay ninguna. */
     protected void prepararIndice() throws IOException {
         // Archivo secuencial: sin indice que preparar.
     }
 
     /**
-     * Devuelve el numero de registro donde vive ese identificador, o null.
-     *
-     * Implementacion por omision: BARRIDO SECUENCIAL, O(n). Se lee unicamente
-     * el estado y el identificador de cada registro, no el registro completo.
+     * Posición del registro que contiene ese id, o null.
+     * Por defecto: barrido secuencial O(n). Solo lee estado + id de cada registro.
      */
     protected Integer localizar(ID id) throws IOException {
         int total = totalRegistros();
@@ -189,14 +144,9 @@ public abstract class ArchivoBase<ID, T> implements Closeable {
     /** Nombre de la organizacion, para el manual y los reportes. */
     public abstract String nombreOrganizacion();
 
-    // =======================================================================
-    // OPERACIONES PUBLICAS
-    // =======================================================================
+    // Operaciones públicas
 
-    /**
-     * Inserta una entidad nueva. Reutiliza el hueco mas reciente si lo hay; si
-     * no, agrega al final del archivo.
-     */
+    /** Inserta una entidad. Reutiliza hueco libre si lo hay; si no, crece al final. */
     public ID insertar(T objeto) throws IOException {
         prepararParaInsertar(objeto);
         ID id = idDe(objeto);
@@ -215,7 +165,7 @@ public abstract class ArchivoBase<ID, T> implements Closeable {
         return id;
     }
 
-    /** @return la entidad, o null si no existe */
+    /** Entidad por id, o null. */
     public T buscarPorId(ID id) throws IOException {
         Integer numeroRegistro = localizar(id);
         if (numeroRegistro == null) {
@@ -229,11 +179,9 @@ public abstract class ArchivoBase<ID, T> implements Closeable {
     }
 
     /**
-     * Todas las entidades vivas, saltando los huecos.
-     *
-     * Este recorrido SIEMPRE es secuencial, sin importar la organizacion: para
-     * leerlo todo, recorrer el archivo de principio a fin es lo mas rapido que
-     * hay. El indice sirve para llegar a UN registro, no para leerlos todos.
+     * Todas las entidades vivas. Siempre es secuencial: para leerlo todo,
+     * barrer de principio a fin es lo más rápido. El índice sirve para llegar
+     * a UN registro, no para leerlos todos.
      */
     public List<T> listarTodos() throws IOException {
         List<T> resultado = new ArrayList<>();
@@ -249,11 +197,8 @@ public abstract class ArchivoBase<ID, T> implements Closeable {
     }
 
     /**
-     * Sobrescribe una entidad existente EN SU MISMA POSICION.
-     *
-     * No se borra y vuelve a insertar: eso desordenaria el archivo y dejaria un
-     * hueco sin motivo. El registro mide siempre lo mismo, asi que se puede
-     * reescribir encima sin mover nada.
+     * Sobrescribe una entidad existente en su misma posición. No borra ni
+     * reinserta: el registro mide siempre lo mismo, se reescribe encima.
      */
     public boolean actualizar(T objeto) throws IOException {
         Integer numeroRegistro = localizar(idDe(objeto));
@@ -264,7 +209,7 @@ public abstract class ArchivoBase<ID, T> implements Closeable {
         return true;
     }
 
-    /** Eliminacion logica: marca el registro libre y lo apila entre los huecos. */
+    /** Eliminación lógica: marca libre y apila entre huecos. */
     public boolean eliminar(ID id) throws IOException {
         Integer numeroRegistro = localizar(id);
         if (numeroRegistro == null) {
@@ -298,18 +243,11 @@ public abstract class ArchivoBase<ID, T> implements Closeable {
         archivo.close();
     }
 
-    // =======================================================================
-    // APILO DE ESPACIOS LIBRES
-    // =======================================================================
+    // Apilo de espacios libres (pila LIFO)
 
     /**
-     * Toma una posicion para un registro nuevo.
-     *
-     * Los huecos forman un APILO (pila LIFO): la cabecera apunta a la cima y
-     * cada hueco guarda, en su campo siguienteLibre, el hueco de abajo. Sacar
-     * un hueco es un pop y liberar uno es un push, ambos O(1) y sin recorrer
-     * nada. Es la misma estructura LIFO que se ve en clase, aplicada a la
-     * administracion del espacio del archivo.
+     * Toma una posición para un registro nuevo. La cabecera apunta a la cima
+     * del apilo; cada hueco guarda en siguienteLibre el de abajo. Pop O(1).
      */
     private int reservarRegistro() throws IOException {
         if (primerLibre == -1) {
@@ -318,11 +256,11 @@ public abstract class ArchivoBase<ID, T> implements Closeable {
 
         int reutilizado = primerLibre;
         archivo.seek(posicionDe(reutilizado) + Byte.BYTES);
-        primerLibre = archivo.readInt(); // pop: la cima pasa a ser el siguiente
+        primerLibre = archivo.readInt(); // pop
         return reutilizado;
     }
 
-    /** Push: el registro liberado se vuelve la nueva cima del apilo. */
+    /** Push: registro liberado se vuelve la nueva cima del apilo. */
     private void liberarRegistro(int numeroRegistro) throws IOException {
         archivo.seek(posicionDe(numeroRegistro));
         archivo.writeByte(REGISTRO_LIBRE);
@@ -330,21 +268,17 @@ public abstract class ArchivoBase<ID, T> implements Closeable {
         primerLibre = numeroRegistro;
     }
 
-    // =======================================================================
-    // LECTURA Y ESCRITURA DE BAJO NIVEL
-    // =======================================================================
+    // Lectura y escritura de bajo nivel
 
     /**
-     * Posicion en bytes donde empieza el registro numero n.
-     *
-     * Esta multiplicacion es la razon de ser de los registros de longitud fija:
-     * se llega a cualquier registro con un unico seek, sin leer los anteriores.
+     * Posición en bytes del registro n. La clave de registros de longitud fija:
+     * se llega con un seek() por multiplicación.
      */
     protected final long posicionDe(int n) {
         return TAM_CABECERA + (long) n * tamRegistro;
     }
 
-    /** Identificador guardado en esa posicion, o null si es un hueco. */
+    /** Identificador en esa posición, o null si es hueco. */
     protected final ID idEn(int numeroRegistro) throws IOException {
         archivo.seek(posicionDe(numeroRegistro));
 
@@ -358,11 +292,11 @@ public abstract class ArchivoBase<ID, T> implements Closeable {
     protected final void escribirRegistro(int numeroRegistro, T objeto) throws IOException {
         archivo.seek(posicionDe(numeroRegistro));
         archivo.writeByte(REGISTRO_OCUPADO);
-        archivo.writeInt(-1); // siguienteLibre no aplica a un registro vivo
+        archivo.writeInt(-1); // siguienteLibre no aplica a registro vivo
         escribirCampos(objeto);
     }
 
-    /** @return la entidad, o null si esa posicion es un hueco */
+    /** La entidad, o null si es hueco. */
     protected final T leerRegistro(int numeroRegistro) throws IOException {
         archivo.seek(posicionDe(numeroRegistro));
 

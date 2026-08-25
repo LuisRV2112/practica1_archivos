@@ -10,27 +10,10 @@ import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 
 /**
- * FlowLayout que calcula bien su altura cuando los componentes no caben en una
- * sola fila.
- *
- * ---------------------------------------------------------------------------
- * EL PROBLEMA QUE RESUELVE
- * ---------------------------------------------------------------------------
- * FlowLayout SI acomoda los componentes en varias filas cuando no caben a lo
- * ancho, pero al calcular su tamano preferido siempre responde la altura de UNA
- * sola fila. El resultado es que el contenedor reserva menos espacio del que
- * realmente ocupa y la segunda fila queda cortada o tapada por lo que sigue.
- *
- * Se nota sobre todo en las barras de filtros: al agregar un filtro mas, o al
- * angostar la ventana, los controles se salen de la vista.
- *
- * ---------------------------------------------------------------------------
- * LA SOLUCION
- * ---------------------------------------------------------------------------
- * Se hereda de FlowLayout —de modo que la colocacion real de los componentes,
- * que ya funciona bien, se aprovecha tal cual— y se reescribe unicamente el
- * calculo del tamano: se simula el acomodo fila por fila con el ancho
- * disponible y se suman las alturas.
+ * FlowLayout que calcula bien su altura multi-fila.
+ * El FlowLayout nativo siempre reporta la altura de UNA fila, por lo que la
+ * segunda queda cortada. Esta versión reescribe el cálculo de tamaño simulando
+ * el acomodo fila por fila con el ancho disponible.
  */
 public class FlujoAjustable extends FlowLayout {
 
@@ -54,10 +37,7 @@ public class FlujoAjustable extends FlowLayout {
         return minimo;
     }
 
-    /**
-     * Recorre los componentes acomodandolos en filas segun el ancho disponible
-     * y devuelve el tamano que realmente hace falta.
-     */
+    /** Simula el acomodo fila por fila y devuelve el tamaño real necesario. */
     private Dimension calcularTamano(Container objetivo, boolean preferido) {
         synchronized (objetivo.getTreeLock()) {
 
@@ -112,11 +92,9 @@ public class FlujoAjustable extends FlowLayout {
     }
 
     /**
-     * Ancho con el que se debe simular el acomodo.
-     *
-     * Se toma el del contenedor si ya fue dimensionado; si todavia no lo fue
-     * (durante el primer armado de la ventana) se usa el maximo, para no
-     * calcular una altura enorme basada en un ancho de cero.
+     * Ancho disponible: si el contenedor ya fue dimensionado se usa ese; si no
+     * (primer armado), se usa MAX_VALUE para no calcular una altura enorme con
+     * ancho cero.
      */
     private static int anchoDe(Container objetivo) {
         Container actual = objetivo;

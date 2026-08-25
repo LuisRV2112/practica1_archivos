@@ -28,11 +28,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Interfaz del modulo de pacientes.
- *
- * Se parece mucho a PanelMedicos, con una diferencia importante: el numero de
- * identificacion es la llave del registro, asi que al editar un paciente ese
- * campo se bloquea. Cambiarlo equivaldria a crear otro paciente distinto.
+ * Interfaz del módulo de pacientes: formulario, filtros y tabla.
+ * La identificación es la clave del registro; al editar se bloquea.
  */
 public class PanelPacientes extends JPanel {
 
@@ -64,8 +61,8 @@ public class PanelPacientes extends JPanel {
     private final JLabel lblEstado = new JLabel(" ");
 
     /**
-     * Identificacion del paciente que se esta editando, o null si el formulario
-     * esta en modo alta. Decide si Guardar inserta o actualiza.
+     * Identificación del paciente en edición; null = modo alta. Decide si
+     * Guardar inserta o actualiza.
      */
     private String idEnEdicion;
 
@@ -84,9 +81,7 @@ public class PanelPacientes extends JPanel {
         refrescar();
     }
 
-    // =======================================================================
-    // CONSTRUCCION DE LA INTERFAZ
-    // =======================================================================
+    // Construcción de la interfaz
 
     private JPanel construirFormulario() {
         JPanel panel = new JPanel(new GridBagLayout());
@@ -174,9 +169,7 @@ public class PanelPacientes extends JPanel {
         return panel;
     }
 
-    // =======================================================================
-    // EVENTOS
-    // =======================================================================
+    // Eventos
 
     private void conectarEventos() {
         btnGuardar.addActionListener(e -> guardar());
@@ -194,9 +187,7 @@ public class PanelPacientes extends JPanel {
         });
     }
 
-    // =======================================================================
-    // ACCIONES
-    // =======================================================================
+    // Acciones
 
     private void guardar() {
         try {
@@ -222,12 +213,8 @@ public class PanelPacientes extends JPanel {
         }
     }
 
-    /**
-     * Da de baja o reactiva al paciente seleccionado.
-     *
-     * No hay eliminacion fisica a proposito: el expediente se conserva para no
-     * dejar huerfanas las citas que lo referencian.
-     */
+    /** Baja / reactivación. No hay borrado físico para conservar integridad
+     *  referencial con las citas. */
     private void alternarEstadoSeleccionado() {
         Paciente seleccionado = pacienteSeleccionado();
         if (seleccionado == null) {
@@ -299,9 +286,7 @@ public class PanelPacientes extends JPanel {
         }
     }
 
-    // =======================================================================
-    // FORMULARIO
-    // =======================================================================
+    // Formulario
 
     private Paciente leerFormulario() throws ExcepcionValidacion {
         LocalDate nacimiento = ServicioPacientes.interpretarFecha(
@@ -362,8 +347,7 @@ public class PanelPacientes extends JPanel {
         if (filaVista < 0) {
             return null;
         }
-        // La tabla se puede ordenar por columna, asi que el indice visible no
-        // coincide con el del modelo: hay que convertirlo.
+        // ConvertRowIndexToModel: la tabla puede estar ordenada por columna.
         return modeloTabla.obtenerEn(tabla.convertRowIndexToModel(filaVista));
     }
 

@@ -12,13 +12,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Adapta una lista de citas al formato que espera JTable.
- *
- * La cita guarda solo referencias (identificacion del paciente, UUID del
- * medico), asi que para mostrarla hay que resolver los nombres. Esos nombres
- * llegan en dos mapas que arma el panel ANTES de refrescar la tabla: si se
- * consultara el archivo dentro de getValueAt() se releeria el disco una vez por
- * celda visible, que es justo lo que no se debe hacer.
+ * Tabla de citas sobre AbstractTableModel. La cita solo guarda referencias
+ * (identificación, UUID), así que los nombres se resuelven con mapas que el
+ * panel arma antes de refrescar (evitando releer disco por cada celda).
  */
 public class ModeloTablaCitas extends AbstractTableModel {
 

@@ -8,45 +8,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Indice HASH sobre archivo. Es lo que convierte al archivo de pacientes en un
- * ARCHIVO DIRECTO: la posicion de un registro se CALCULA a partir de su clave,
- * no se busca.
+ * Índice hash sobre archivo. Convierte a pacientes en archivo directo O(1).
  *
- * ---------------------------------------------------------------------------
- * ESTRUCTURA DEL ARCHIVO DE INDICE
- * ---------------------------------------------------------------------------
+ * Estructura: [ Cabecera 8 bytes ][ cubeta 0 ][ cubeta 1 ] ...
+ *   Cabecera: capacidad(4) + cantidad(4)
+ *   Cubeta:   estado(1) + clave(largoClave) + numeroRegistro(4)
  *
- *  [ CABECERA: 8 bytes ][ cubeta 0 ][ cubeta 1 ] ... [ cubeta capacidad-1 ]
- *
- *  Cabecera:
- *      int capacidad  (4)  cuantas cubetas tiene la tabla
- *      int cantidad   (4)  cuantas estan ocupadas
- *
- *  Cubeta (fija):
- *      byte estado          (1)  0 = libre, 1 = ocupada, 2 = borrada
- *      char[largoClave]          la clave
- *      int  numeroRegistro  (4)  posicion en el archivo de datos
- *
- * ---------------------------------------------------------------------------
- * COMO FUNCIONA
- * ---------------------------------------------------------------------------
- *
- * 1. La funcion de dispersion convierte la clave en un numero, y el resto de
- *    dividirlo entre la capacidad da la cubeta donde deberia estar.
- *
- * 2. COLISIONES: dos claves distintas pueden caer en la misma cubeta. Se
- *    resuelven por SONDEO LINEAL: si la cubeta esta ocupada por otra clave, se
- *    prueba la siguiente, y asi sucesivamente.
- *
- * 3. BORRADOS: una cubeta borrada NO se marca como libre, sino con una marca
- *    propia (una "lapida"). Si se marcara libre, una busqueda que llegara ahi
- *    se detendria y no encontraria claves que se guardaron mas adelante por
- *    sondeo. La lapida dice "aqui no esta, pero sigue buscando".
- *
- * 4. FACTOR DE CARGA: cuando la tabla se llena por encima del 70% las
- *    colisiones se disparan y el O(1) deja de cumplirse. Al pasar ese umbral la
- *    tabla se REDISPERSA: se duplica la capacidad y se recolocan todas las
- *    claves.
+ * Colisiones: sondeo lineal. Borradoss: lápida (no libre) para no interrumpir
+ * búsquedas. Redispersión al superar 70% de ocupación.
  */
 public class IndiceHash implements Closeable {
 
@@ -56,10 +25,10 @@ public class IndiceHash implements Closeable {
     private static final byte CUBETA_OCUPADA = 1;
     private static final byte CUBETA_BORRADA = 2; // lapida
 
-    /** Umbral de ocupacion a partir del cual se redispersa. */
+    /** Umbral de ocupación para redispersar. */
     private static final double FACTOR_CARGA_MAXIMO = 0.70;
 
-    private static final int CAPACIDAD_INICIAL = 61; // primo: reparte mejor
+    private static final int CAPACIDAD_INICIAL = 61; // primo para mejor distribución
 
     private final File ruta;
     private final int largoClave;
@@ -93,24 +62,17 @@ public class IndiceHash implements Closeable {
         }
     }
 
-    // =======================================================================
-    // OPERACIONES
-    // =======================================================================
+    // Operaciones
 
     /**
-     * Busca la posicion asociada a una clave.
-     *
-     * Cuesta O(1) en promedio: se calcula la cubeta y, salvo colision, se
-     * acierta al primer intento.
-     *
-     * @return el numero de registro, o null si la clave no esta
+     * Busca la posición de una clave: O(1) promedio. Lápida = sigue buscando,
+     * libre = no está.
      */
     public Integer buscar(String clave) throws IOException {
         String llave = normalizar(clave);
         int cubeta = cubetaDe(llave);
 
-        // Se avanza mientras haya algo (ocupada o lapida). Una cubeta LIBRE
-        // significa que la clave nunca se guardo: no hay nada mas alla.
+        // Avanza mientras haya algo (ocupada o lápida). Libre = no existe.
         for (int intento = 0; intento < capacidad; intento++) {
             int actual = (cubeta + intento) % capacidad;
 
@@ -130,7 +92,7 @@ public class IndiceHash implements Closeable {
         return null;
     }
 
-    /** Asocia una clave con una posicion. Redispersa si la tabla se llena. */
+    /** Asocia clave con posición. Redispersa si la tabla se llena. */
     public void insertar(String clave, int numeroRegistro) throws IOException {
         if ((cantidad + 1) > capacidad * FACTOR_CARGA_MAXIMO) {
             redispersar();
@@ -142,8 +104,8 @@ public class IndiceHash implements Closeable {
     }
 
     /**
-     * Cambia el valor asociado a una clave, o la inserta si no estaba.
-     * Lo usa el multianillo para mover la cabeza de un anillo.
+     * Actualiza el valor de una clave, o la inserta si no existía.
+     * Lo usa el multianillo para mover cabezas.
      */
     public void actualizar(String clave, int numeroRegistro) throws IOException {
         String llave = normalizar(clave);
@@ -169,7 +131,7 @@ public class IndiceHash implements Closeable {
         insertar(llave, numeroRegistro);
     }
 
-    /** Marca la clave como borrada dejando una lapida. */
+    /** Marca como borrada dejando lápida. */
     public void eliminar(String clave) throws IOException {
         String llave = normalizar(clave);
         int cubeta = cubetaDe(llave);
@@ -196,7 +158,7 @@ public class IndiceHash implements Closeable {
         }
     }
 
-    /** Vacia el indice por completo, para reconstruirlo desde el archivo de datos. */
+    /** Vacia el índice para reconstruirlo desde el archivo de datos. */
     public void vaciar() throws IOException {
         formatear(CAPACIDAD_INICIAL);
     }
@@ -209,7 +171,7 @@ public class IndiceHash implements Closeable {
         return cantidad;
     }
 
-    /** Porcentaje de ocupacion de la tabla, util para el reporte tecnico. */
+    /** Porcentaje de ocupación; para reporte técnico. */
     public double factorCarga() {
         return (capacidad == 0) ? 0 : (double) cantidad / capacidad;
     }
@@ -219,18 +181,11 @@ public class IndiceHash implements Closeable {
         archivo.close();
     }
 
-    // =======================================================================
-    // INTERNOS
-    // =======================================================================
+    // Internos
 
     /**
-     * Funcion de dispersion propia: acumula los caracteres multiplicando por 31
-     * en cada paso.
-     *
-     * El 31 no es casual: es primo e impar, lo que evita que caracteres
-     * distintos se anulen entre si y reparte mejor las claves. Es la misma idea
-     * detras del hashCode de String en Java, escrita aqui a mano porque el
-     * enunciado pide que el manejo del archivo sea codigo propio.
+     * Hash propio: acumula caracteres multiplicando por 31 (primo impar,
+     * misma idea que String.hashCode(), escrito a mano por exigencia del enunciado).
      */
     private int dispersar(String clave) {
         int valor = 7;
@@ -240,12 +195,7 @@ public class IndiceHash implements Closeable {
         return valor;
     }
 
-    /**
-     * Cubeta inicial de una clave.
-     *
-     * Se limpia el bit de signo antes del modulo porque el acumulado puede
-     * desbordar a negativo, y un indice negativo reventaria la lectura.
-     */
+    /** Cubeta inicial. Se limpia bit de signo antes del módulo para evitar negativos. */
     private int cubetaDe(String clave) {
         return (dispersar(clave) & 0x7FFFFFFF) % capacidad;
     }
@@ -254,7 +204,7 @@ public class IndiceHash implements Closeable {
         return TAM_CABECERA + (long) cubeta * tamCubeta;
     }
 
-    /** Escribe la entrada en la primera cubeta disponible desde su posicion natural. */
+    /** Escribe entrada en la primera cubeta libre u honeada desde su posición. */
     private void colocar(String clave, int numeroRegistro) throws IOException {
         int cubeta = cubetaDe(clave);
 
@@ -264,7 +214,7 @@ public class IndiceHash implements Closeable {
             archivo.seek(posicionDe(actual));
             byte estado = archivo.readByte();
 
-            // Una lapida se puede reutilizar: ya no hay nadie ahi.
+            // Lápida se puede reutilizar.
             if (estado == CUBETA_LIBRE || estado == CUBETA_BORRADA) {
                 archivo.seek(posicionDe(actual));
                 archivo.writeByte(CUBETA_OCUPADA);
@@ -277,10 +227,8 @@ public class IndiceHash implements Closeable {
     }
 
     /**
-     * Duplica la capacidad y recoloca todas las claves.
-     *
-     * Es costoso, pero ocurre pocas veces (cada vez que el archivo duplica su
-     * tamano) y evita que las colisiones degraden la busqueda a O(n).
+     * Duplica capacidad y recoloca claves. Costoso pero ocurre pocas veces
+     * y evita que colisiones degraden la búsqueda a O(n).
      */
     private void redispersar() throws IOException {
         List<String> claves = new ArrayList<>();
@@ -303,7 +251,7 @@ public class IndiceHash implements Closeable {
         escribirCabecera();
     }
 
-    /** Deja el archivo con la capacidad indicada y todas las cubetas libres. */
+    /** Formatea el archivo con la capacidad indicada y todas las cubetas libres. */
     private void formatear(int nuevaCapacidad) throws IOException {
         this.capacidad = nuevaCapacidad;
         this.cantidad = 0;
@@ -311,8 +259,7 @@ public class IndiceHash implements Closeable {
         archivo.setLength(0);
         escribirCabecera();
 
-        // Se escribe la tabla completa de una vez, en memoria, en lugar de
-        // hacer miles de escrituras sueltas al archivo.
+        // Escribe tabla completa de una vez en memoria (más rápido que muchas escrituras).
         byte[] vacia = new byte[capacidad * tamCubeta];
         archivo.seek(TAM_CABECERA);
         archivo.write(vacia);
@@ -324,7 +271,7 @@ public class IndiceHash implements Closeable {
         archivo.writeInt(cantidad);
     }
 
-    /** Primer numero primo mayor o igual a n; una capacidad prima reparte mejor. */
+    /** Primo mayor o igual a n; capacidad prima → mejor distribución. */
     private static int siguientePrimo(int n) {
         int candidato = Math.max(n, 3);
         if (candidato % 2 == 0) {

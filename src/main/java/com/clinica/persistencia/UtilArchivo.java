@@ -8,19 +8,10 @@ import java.time.LocalTime;
 import java.time.ZoneOffset;
 
 /**
- * Utilidades de bajo nivel para escribir y leer campos de LONGITUD FIJA.
- *
- * Todo el diseno del sistema descansa en una idea: si cada registro mide
- * exactamente lo mismo, la posicion de un registro se calcula con una
- * multiplicacion y se llega a el con un unico seek(), sin recorrer el archivo.
- *
- * Por eso NO se usa writeUTF(): ese metodo escribe primero la longitud y luego
- * los bytes, de modo que dos nombres distintos ocupan distinto espacio y el
- * calculo de posiciones se rompe.
- *
- * Las cadenas se guardan con writeChars(): 2 bytes por caracter (UTF-16).
- * Gasta el doble de espacio que ASCII, pero maneja tildes y enies sin riesgo
- * de partir un caracter multibyte a la mitad.
+ * Utilidades de bajo nivel para campos de longitud fija.
+ * NO se usa writeUTF() porque rompe el cálculo de posiciones por aritmética
+ * de bytes. Las cadenas se guardan con writeChars(): 2 bytes/caracter (UTF-16),
+ * suficiente para tildes y ñ.
  */
 public final class UtilArchivo {
 
@@ -29,9 +20,8 @@ public final class UtilArchivo {
     }
 
     /**
-     * Escribe una cadena ocupando siempre {@code longitud} caracteres.
-     * Si el texto es mas corto se rellena con espacios; si es mas largo se
-     * recorta. Asi el campo siempre ocupa los mismos bytes.
+     * Escribe una cadena con longitud fija. Si es más corta rellena con espacios;
+     * si es más larga, recorta.
      */
     public static void escribirCadena(RandomAccessFile archivo, String valor, int longitud)
             throws IOException {
@@ -60,52 +50,40 @@ public final class UtilArchivo {
         return new String(buffer).trim();
     }
 
-    /**
-     * Escribe una hora como un entero: los segundos transcurridos desde
-     * medianoche. Ocupa 4 bytes fijos. Un valor nulo se guarda como -1.
-     */
+    /** Escribe hora como segundos desde medianoche (4 bytes). Nulo = -1. */
     public static void escribirHora(RandomAccessFile archivo, LocalTime hora) throws IOException {
         archivo.writeInt(hora == null ? -1 : hora.toSecondOfDay());
     }
 
-    /** Lee una hora guardada con {@link #escribirHora}. */
+    /** Lee hora escrita con {@link #escribirHora}. */
     public static LocalTime leerHora(RandomAccessFile archivo) throws IOException {
         int segundos = archivo.readInt();
         return (segundos < 0) ? null : LocalTime.ofSecondOfDay(segundos);
     }
 
-    /** Cuantos bytes ocupa un campo de texto de {@code caracteres} de largo. */
+    /** Bytes que ocupa un campo de texto de {@code caracteres} caracteres. */
     public static int bytesDeCadena(int caracteres) {
         return caracteres * Character.BYTES; // 2 bytes por caracter
     }
 
     /**
-     * Escribe una fecha como los dias transcurridos desde el 1 de enero de 1970.
-     * Ocupa 8 bytes fijos y admite fechas anteriores a esa (dias negativos), lo
-     * que importa para las fechas de nacimiento.
-     *
-     * Un valor nulo se guarda como Long.MIN_VALUE, que nunca puede ser una
-     * fecha real.
+     * Escribe fecha como días desde epoch (8 bytes). Admite fechas anteriores
+     * a 1970 (días negativos). Nulo = Long.MIN_VALUE.
      */
     public static void escribirFecha(RandomAccessFile archivo, LocalDate fecha) throws IOException {
         archivo.writeLong(fecha == null ? Long.MIN_VALUE : fecha.toEpochDay());
     }
 
-    /** Lee una fecha guardada con {@link #escribirFecha}. */
+    /** Lee fecha escrita con {@link #escribirFecha}. */
     public static LocalDate leerFecha(RandomAccessFile archivo) throws IOException {
         long dias = archivo.readLong();
         return (dias == Long.MIN_VALUE) ? null : LocalDate.ofEpochDay(dias);
     }
 
     /**
-     * Escribe una fecha con hora como segundos desde el 1 de enero de 1970.
-     * Ocupa 8 bytes fijos.
-     *
-     * Se usa ZoneOffset.UTC como referencia fija tanto al escribir como al leer.
-     * Lo importante no es que sea UTC, sino que sea SIEMPRE EL MISMO desplazamiento:
-     * si se usara la zona horaria del sistema, mover la maquina de zona (o un
-     * cambio de horario de verano) haria que las marcas de tiempo ya guardadas se
-     * leyeran corridas.
+     * Escribe LocalDateTime como segundos desde epoch en UTC (8 bytes).
+     * Se usa UTC fijo para que un cambio de zona horaria no corra las marcas
+     * ya guardadas.
      */
     public static void escribirFechaHora(RandomAccessFile archivo, LocalDateTime momento)
             throws IOException {
@@ -114,7 +92,7 @@ public final class UtilArchivo {
                 : momento.toEpochSecond(ZoneOffset.UTC));
     }
 
-    /** Lee una marca de tiempo guardada con {@link #escribirFechaHora}. */
+    /** Lee marca de tiempo escrita con {@link #escribirFechaHora}. */
     public static LocalDateTime leerFechaHora(RandomAccessFile archivo) throws IOException {
         long segundos = archivo.readLong();
         return (segundos == Long.MIN_VALUE)

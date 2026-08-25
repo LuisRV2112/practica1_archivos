@@ -28,10 +28,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Interfaz del modulo de medicos: formulario de captura, filtros y tabla.
- *
- * Este panel no sabe nada de RandomAccessFile: todo lo pide a ServicioMedicos.
- * Su unica responsabilidad es mostrar datos y recoger lo que el usuario teclea.
+ * Interfaz del módulo de médicos: formulario, filtros y tabla.
+ * Pide todo a ServicioMedicos; no sabe nada de persistencia.
  */
 public class PanelMedicos extends JPanel {
 
@@ -63,9 +61,8 @@ public class PanelMedicos extends JPanel {
     private final JLabel lblEstado = new JLabel(" ");
 
     /**
-     * Id del medico que se esta editando. Si es null, el formulario esta en
-     * modo "alta"; si tiene valor, en modo "modificacion". Es lo que decide si
-     * Guardar inserta o actualiza.
+     * UUID del médico en edición; null = modo alta. Decide si Guardar inserta
+     * o actualiza.
      */
     private UUID idEnEdicion;
 
@@ -82,9 +79,7 @@ public class PanelMedicos extends JPanel {
         refrescar();
     }
 
-    // =======================================================================
-    // CONSTRUCCION DE LA INTERFAZ
-    // =======================================================================
+    // Construcción de la interfaz
 
     private JPanel construirFormulario() {
         JPanel panel = new JPanel(new GridBagLayout());
@@ -170,9 +165,7 @@ public class PanelMedicos extends JPanel {
         return panel;
     }
 
-    // =======================================================================
-    // EVENTOS
-    // =======================================================================
+    // Eventos
 
     private void conectarEventos() {
         btnGuardar.addActionListener(e -> guardar());
@@ -193,9 +186,7 @@ public class PanelMedicos extends JPanel {
         });
     }
 
-    // =======================================================================
-    // ACCIONES
-    // =======================================================================
+    // Acciones
 
     private void guardar() {
         try {
@@ -313,9 +304,7 @@ public class PanelMedicos extends JPanel {
         }
     }
 
-    // =======================================================================
-    // FORMULARIO
-    // =======================================================================
+    // Formulario
 
     private Medico leerFormulario() throws ExcepcionValidacion {
         // El componente no permite construir una hora invalida, pero se sigue
@@ -379,8 +368,7 @@ public class PanelMedicos extends JPanel {
         if (filaVista < 0) {
             return null;
         }
-        // La tabla permite ordenar por columna, asi que el indice visible no
-        // coincide con el del modelo: hay que convertirlo.
+        // ConvertRowIndexToModel: la tabla puede estar ordenada por columna.
         return modeloTabla.obtenerEn(tabla.convertRowIndexToModel(filaVista));
     }
 

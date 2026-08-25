@@ -8,12 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Adapta una lista de medicos al formato que JTable espera.
- *
- * Se extiende AbstractTableModel en lugar de usar DefaultTableModel porque asi
- * la tabla trabaja sobre los objetos Medico reales: al seleccionar una fila se
- * recupera el objeto completo (con su UUID) sin tener que reconstruirlo a
- * partir del texto que se ve en pantalla.
+ * Tabla de médicos sobre AbstractTableModel. Trabaja con objetos Medico reales
+ * (no con Strings), de modo que seleccionar una fila devuelve el objeto
+ * completo sin reconstruirlo.
  */
 public class ModeloTablaMedicos extends AbstractTableModel {
 

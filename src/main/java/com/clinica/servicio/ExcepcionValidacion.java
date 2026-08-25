@@ -1,15 +1,9 @@
 package com.clinica.servicio;
 
 /**
- * Se lanza cuando los datos que llegan desde la interfaz no cumplen una regla
- * de negocio (un campo obligatorio vacio, un horario invertido, etc.).
- *
- * Es una excepcion revisada (checked) a proposito: obliga a que la vista la
- * atrape y le muestre el mensaje al usuario, en lugar de dejar que el programa
- * truene con un error sin explicacion.
- *
- * Se distingue de IOException, que representa una falla al leer o escribir el
- * archivo. Son dos problemas distintos y la vista los reporta distinto.
+ * Excepción revisada para errores de negocio (campo obligatorio vacío, horario
+ * invertido, etc.). Checked a propósito para que la vista la atrape y le muestre
+ * el mensaje al usuario. Se distingue de IOException (falla de archivo).
  */
 public class ExcepcionValidacion extends Exception {
 

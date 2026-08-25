@@ -18,29 +18,18 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Reglas de negocio del modulo de pacientes.
+ * Reglas de negocio de pacientes. La vista nunca toca el archivo directamente.
  *
- * Mismo esquema que ServicioMedicos: la vista nunca toca el archivo, solo pide
- * cosas a esta clase.
- *
- * Reglas que exige el enunciado:
- *   - el numero de identificacion no puede repetirse
- *   - nombres y apellidos son obligatorios
- *   - el correo es opcional
+ * Reglas del enunciado: identificación única; nombres y apellidos obligatorios;
+ * correo opcional. Borrado lógico para conservar integridad referencial de las
+ * citas históricas.
  */
 public class ServicioPacientes {
 
     /**
-     * Formato de fecha usado en toda la interfaz.
-     *
-     * Se configura con ResolverStyle.STRICT porque, por omision, el formateador
-     * trabaja en modo SMART: ante una fecha inexistente como 31/02/1990 no falla,
-     * sino que la "corrige" en silencio al 28/02. Eso guardaria en el archivo una
-     * fecha que el usuario nunca escribio.
-     *
-     * El patron usa "uuuu" en lugar de "yyyy" porque el modo estricto exige un
-     * ano sin ambiguedad de era (uuuu admite anos negativos; yyyy necesita saber
-     * si es antes o despues de Cristo y falla sin ese dato).
+     * Formato dd/MM/uuuu con STRICT para no "corregir" fechas como 31/02.
+     * Se usa "uuuu" (no "yyyy") porque el modo estricto exige un año sin
+     * ambigüedad de era.
      */
     public static final DateTimeFormatter FORMATO_FECHA =
             DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT);
@@ -48,9 +37,8 @@ public class ServicioPacientes {
     private final ArchivoPacientes archivo;
 
     /**
-     * Archivo de citas. Se necesita para impedir que se elimine a un paciente
-     * que tenga citas registradas. Se recibe el archivo y no ServicioCitas para
-     * evitar una dependencia circular entre servicios.
+     * Archivo de citas. Se usa para impedir borrados que dejarían citas huérfanas.
+     * Se recibe el archivo (no ServicioCitas) para evitar dependencias circulares.
      */
     private final ArchivoCitas archivoCitas;
 
@@ -64,9 +52,7 @@ public class ServicioPacientes {
         this.bitacora = bitacora;
     }
 
-    // =======================================================================
-    // ALTAS Y CAMBIOS
-    // =======================================================================
+    // Altas y cambios
 
     public void registrar(Paciente paciente) throws ExcepcionValidacion, IOException {
         validar(paciente);
@@ -83,16 +69,14 @@ public class ServicioPacientes {
     }
 
     /**
-     * Guarda los cambios de un paciente. La identificacion no se puede cambiar:
-     * es la llave del registro y las citas la referencian. Para "cambiarla"
-     * habria que eliminar y volver a crear, con las citas que eso implica.
+     * Modifica un paciente existente. La identificación no se puede cambiar:
+     * es la clave del registro y las citas la referencian.
      */
     public void modificar(Paciente paciente) throws ExcepcionValidacion, IOException {
         validar(paciente);
 
-        // El formulario no edita el estado: se conserva el que ya tenia el
-        // registro para que una modificacion normal no reactive por accidente
-        // a un paciente dado de baja.
+        // Se conserva el estado anterior para que una modificación no reactive
+        // por accidente a un paciente dado de baja.
         Paciente anterior = archivo.buscarPorId(paciente.getIdentificacion());
         if (anterior != null) {
             paciente.setActivo(anterior.isActivo());
@@ -108,21 +92,9 @@ public class ServicioPacientes {
     }
 
     /**
-     * Da de baja a un paciente: BORRADO LOGICO EN LA CAPA DE DOMINIO.
-     *
-     * El expediente NO se borra del archivo. Se marca como inactivo y sigue
-     * ahi, por dos razones:
-     *
-     *   1. Integridad referencial. Sus citas historicas guardan su numero de
-     *      identificacion; si el registro desapareciera, esas citas quedarian
-     *      huerfanas, apuntando a alguien que ya no existe. En una base de
-     *      datos eso lo impide el motor; aqui hay que garantizarlo a mano.
-     *
-     *   2. Valor clinico. El historial de un paciente no se tira; se archiva.
-     *
-     * Si el paciente tiene citas PROGRAMADAS (todavia pendientes) la baja se
-     * rechaza: primero hay que atenderlas o cancelarlas, o la clinica quedaria
-     * con citas agendadas para alguien que ya no es paciente.
+     * Borrado lógico: se marca como inactivo, no se borra del archivo.
+     * Razones: (1) integridad referencial con citas históricas; (2) el
+     * historial clínico no se tira. Se rechaza si tiene citas programadas.
      */
     public void darDeBaja(String identificacion) throws ExcepcionValidacion, IOException {
         String id = normalizar(identificacion);
@@ -188,11 +160,9 @@ public class ServicioPacientes {
         return resultado;
     }
 
-    // =======================================================================
-    // CONSULTAS
-    // =======================================================================
+    // Consultas
 
-    /** Listado completo, ordenado por apellidos y luego nombres. */
+    /** Listado completo, ordenado por apellidos → nombres. */
     public List<Paciente> listar() throws IOException {
         List<Paciente> pacientes = archivo.listarTodos();
         pacientes.sort(Comparator
@@ -209,11 +179,7 @@ public class ServicioPacientes {
         return archivo.existe(normalizar(identificacion));
     }
 
-    /**
-     * Busqueda por numero de identificacion, nombre o apellido, tal como pide
-     * el enunciado. Si el texto coincide exactamente con una identificacion se
-     * resuelve por el indice, en una sola lectura.
-     */
+    /** Busca por identificación exacta (índice O(1)) o por texto libre. */
     public List<Paciente> buscar(String texto) throws IOException {
         String consulta = normalizar(texto);
         if (consulta.isEmpty()) {
@@ -258,9 +224,7 @@ public class ServicioPacientes {
         return archivo.cantidad();
     }
 
-    // =======================================================================
-    // VALIDACIONES
-    // =======================================================================
+    // Validaciones
 
     private void validar(Paciente paciente) throws ExcepcionValidacion {
         if (paciente == null) {
@@ -291,7 +255,7 @@ public class ServicioPacientes {
                     "El numero de identificacion solo puede contener digitos.");
         }
 
-        // --- Longitudes, para que nada se recorte al escribirlo ---
+        // --- Longitudes máximas ---
         limitar(paciente.getIdentificacion(), ArchivoPacientes.LARGO_IDENTIFICACION,
                 "Identificacion");
         limitar(paciente.getNombres(), ArchivoPacientes.LARGO_NOMBRES, "Nombres");
@@ -299,7 +263,7 @@ public class ServicioPacientes {
         limitar(paciente.getTelefono(), ArchivoPacientes.LARGO_TELEFONO, "Telefono");
         limitar(paciente.getCorreo(), ArchivoPacientes.LARGO_CORREO, "Correo");
 
-        // --- Correo: opcional, pero si viene debe tener forma de correo ---
+        // --- Correo: opcional pero con formato si viene ---
         if (!paciente.getCorreo().isEmpty() && !esCorreoValido(paciente.getCorreo())) {
             throw new ExcepcionValidacion("El correo electronico no tiene un formato valido.");
         }
@@ -346,7 +310,7 @@ public class ServicioPacientes {
                 && !correo.contains(" ");
     }
 
-    /** Convierte un texto "dd/MM/yyyy" en LocalDate. */
+    /** Convierte texto "dd/MM/uuuu" a LocalDate. */
     public static LocalDate interpretarFecha(String texto, String campo)
             throws ExcepcionValidacion {
         String valor = normalizar(texto);
@@ -361,7 +325,7 @@ public class ServicioPacientes {
         }
     }
 
-    /** Da formato "dd/MM/yyyy" a una fecha, o cadena vacia si es nula. */
+    /** Da formato "dd/MM/uuuu"; cadena vacía si es nula. */
     public static String formatearFecha(LocalDate fecha) {
         return (fecha == null) ? "" : fecha.format(FORMATO_FECHA);
     }

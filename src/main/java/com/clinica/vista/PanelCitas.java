@@ -39,11 +39,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Interfaz del modulo de citas.
- *
- * Paciente y medico se eligen de listas desplegables, no se teclean: asi es
- * imposible escribir una referencia a alguien que no existe. La validacion del
- * servicio sigue estando, pero la interfaz evita el error de entrada.
+ * Interfaz del módulo de citas. Paciente y médico se eligen de combos (no se
+ * teclean), lo que evita referencias a entidades inexistentes.
  */
 public class PanelCitas extends JPanel {
 
@@ -99,9 +96,7 @@ public class PanelCitas extends JPanel {
         refrescar();
     }
 
-    // =======================================================================
-    // CONSTRUCCION DE LA INTERFAZ
-    // =======================================================================
+    // Construcción de la interfaz
 
     private JPanel construirFormulario() {
         JPanel panel = new JPanel(new GridBagLayout());
@@ -210,9 +205,7 @@ public class PanelCitas extends JPanel {
         return panel;
     }
 
-    // =======================================================================
-    // EVENTOS
-    // =======================================================================
+    // Eventos
 
     private void conectarEventos() {
         btnProgramar.addActionListener(e -> programar());
@@ -235,9 +228,7 @@ public class PanelCitas extends JPanel {
         });
     }
 
-    // =======================================================================
-    // ACCIONES
-    // =======================================================================
+    // Acciones
 
     private void programar() {
         try {
@@ -349,17 +340,11 @@ public class PanelCitas extends JPanel {
         }
     }
 
-    // =======================================================================
-    // CARGA DE DATOS
-    // =======================================================================
+    // Carga de datos
 
     /**
-     * Vuelve a llenar los combos de seleccion y de filtro.
-     *
-     * En el combo de programacion solo aparecen medicos ACTIVOS: un medico
-     * inactivo no puede recibir citas, asi que ni se ofrece. En el de filtro
-     * aparecen todos, porque puede haber citas viejas de un medico que despues
-     * se desactivo.
+     * Recarga combos de selección y filtro. Solo médicos activos en el de
+     * programación; todos en el de filtro (puede haber citas viejas).
      */
     private void recargarCombos() {
         try {
@@ -498,9 +483,7 @@ public class PanelCitas extends JPanel {
         return mapa;
     }
 
-    // =======================================================================
-    // FORMULARIO
-    // =======================================================================
+    // Formulario
 
     private void cargarSeleccionEnFormulario() {
         Cita cita = citaSeleccionada();
@@ -546,7 +529,7 @@ public class PanelCitas extends JPanel {
         if (filaVista < 0) {
             return null;
         }
-        // La tabla se puede ordenar por columna: hay que convertir el indice.
+        // ConvertRowIndexToModel: la tabla puede estar ordenada por columna.
         return modeloTabla.obtenerEn(tabla.convertRowIndexToModel(filaVista));
     }
 

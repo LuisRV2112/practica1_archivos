@@ -8,28 +8,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Lector de archivos CSV escrito a mano.
- *
- * Es la operacion inversa de {@link ExportadorReportes}: aquel aplica las reglas
- * del formato al escribir y este las deshace al leer.
- *
- * ---------------------------------------------------------------------------
- * POR QUE NO BASTA CON UN split(",")
- * ---------------------------------------------------------------------------
- * Un campo puede contener una coma si va entre comillas. Con split(","), un
- * motivo de consulta como "dolor de cabeza, nauseas" se partiria en dos
- * columnas y todas las siguientes quedarian corridas, produciendo datos
- * silenciosamente equivocados.
- *
- * Por eso se recorre caracter por caracter llevando cuenta de si se esta dentro
- * o fuera de comillas:
- *
- *   - Una coma FUERA de comillas termina el campo.
- *   - Una coma DENTRO de comillas es parte del texto.
- *   - Dos comillas seguidas dentro de un campo representan una comilla real,
- *     que es como el exportador las escribio.
- *   - Un salto de linea dentro de comillas tampoco termina el registro: las
- *     observaciones de una cita pueden ocupar varios renglones.
+ * Lector CSV escrito a mano. Inverso de ExportadorReportes: deshace las reglas
+ * del formato al leer. No se usa split(",") porque las comillas encapsulan
+ * comillas literales dentro de campos: se recorre carácter a carácter llevando
+ * cuenta del estado "dentro/fuera de comillas".
  */
 public final class LectorCsv {
 
@@ -37,11 +19,8 @@ public final class LectorCsv {
     }
 
     /**
-     * Lee el archivo completo y devuelve sus filas ya separadas en campos.
-     *
-     * Se lee como UTF-8 explicitamente, la misma codificacion con la que
-     * exporta el sistema. Sin indicarla, Java usaria la del sistema operativo y
-     * las tildes llegarian rotas desde otra maquina.
+     * Lee el archivo como UTF-8 explícitamente: sin indicarlo, Java usaría la
+     * codificación del SO y las tildes llegarían rotas desde otra máquina.
      */
     public static List<String[]> leer(File archivo) throws IOException {
         String contenido = Files.readString(archivo.toPath(), StandardCharsets.UTF_8);
@@ -118,11 +97,8 @@ public final class LectorCsv {
     }
 
     /**
-     * Indica si la fila parece ser el encabezado de columnas y no un dato.
-     *
-     * Se compara el primer campo con el nombre esperado de la primera columna.
-     * Asi el archivo funciona lo mismo con encabezado que sin el, que es como
-     * llegan los CSV del mundo real.
+     * Indica si la fila parece encabezado comparando el primer campo con la
+     * columna esperada. Así el archivo funciona con o sin encabezado.
      */
     public static boolean pareceEncabezado(String[] fila, String primeraColumna) {
         return fila.length > 0 && fila[0].equalsIgnoreCase(primeraColumna);

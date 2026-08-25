@@ -1,10 +1,7 @@
 package com.clinica.modelo;
 
 /**
- * Tipo de operacion que se registra en la bitacora.
- *
- * Igual que los demas enums del sistema, cada constante guarda un codigo
- * numerico fijo en lugar de depender de ordinal().
+ * Tipo de operación en bitácora. Código numérico fijo para no depender de ordinal().
  */
 public enum TipoOperacion {
 

@@ -5,10 +5,8 @@ import com.clinica.modelo.Reporte;
 import javax.swing.table.AbstractTableModel;
 
 /**
- * Muestra cualquier {@link Reporte} en un JTable.
- *
- * Como el reporte ya trae sus columnas y sus filas convertidas a texto, este
- * modelo no sabe ni le importa de que reporte se trata: sirve para los quince.
+ * Tabla genérica para cualquier {@link Reporte}. El reporte ya trae columnas y
+ * filas como texto; este modelo no necesita saber de qué reporte se trata.
  */
 public class ModeloTablaReporte extends AbstractTableModel {
 
@@ -16,8 +14,7 @@ public class ModeloTablaReporte extends AbstractTableModel {
 
     public void establecerReporte(Reporte reporte) {
         this.reporte = (reporte == null) ? new Reporte("(sin datos)", "Columna") : reporte;
-        // Cambia la cantidad de columnas, no solo los datos: hay que avisar de
-        // un cambio de ESTRUCTURA para que la tabla se reconstruya entera.
+        // fireTableStructureChanged: cambia el número de columnas, no solo datos.
         fireTableStructureChanged();
     }
 
