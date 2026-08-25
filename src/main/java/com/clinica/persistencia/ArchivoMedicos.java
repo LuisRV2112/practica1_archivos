@@ -7,11 +7,28 @@ import java.time.LocalTime;
 import java.util.UUID;
 
 /**
- * Persistencia de medicos.
+ * Persistencia de medicos: ARCHIVO SECUENCIAL INDEXADO.
  *
- * Toda la mecanica de almacenamiento (cabecera, borrado logico, lista de
- * espacios libres, indice) la aporta {@link ArchivoBase}. Aqui solo se describe
- * como se ve un medico convertido a bytes.
+ * ---------------------------------------------------------------------------
+ * POR QUE ESTA ORGANIZACION
+ * ---------------------------------------------------------------------------
+ * Los medicos son pocos comparados con los pacientes, casi nunca se dan de alta
+ * y se consultan constantemente: cada cita que se programa obliga a verificar
+ * que el medico exista, este activo y que la hora caiga en su horario. Ademas,
+ * varios reportes del enunciado recorren la lista completa (por especialidad,
+ * con mas citas, activos, inactivos).
+ *
+ * Ese patron —pocas altas, muchas lecturas, y reportes que barren todo— encaja
+ * con el archivo secuencial indexado: el archivo de DATOS se mantiene
+ * secuencial, que es lo optimo para recorrerlo entero, y un archivo de INDICE
+ * aparte se mantiene ORDENADO por clave para localizar un medico con BUSQUEDA
+ * BINARIA en O(log n).
+ *
+ * Se paga al insertar (hay que abrir hueco en el indice para no perder el
+ * orden) y se cobra al buscar. En una clinica se consulta mucho mas de lo que
+ * se contrata personal, asi que el cambio conviene.
+ *
+ * El indice vive en un archivo aparte (medicos.idx); ver {@link IndiceOrdenado}.
  *
  * ---------------------------------------------------------------------------
  * REGISTRO DE MEDICO: 380 bytes
@@ -49,20 +66,92 @@ public class ArchivoMedicos extends ArchivoBase<UUID, Medico> {
      * numero magico: si manana se agranda un campo, la constante se ajusta sola.
      */
     private static final int TAM_REGISTRO =
-            TAM_ENCABEZADO_REGISTRO
-                    + Long.BYTES * 2                                      // uuid
-                    + UtilArchivo.bytesDeCadena(LARGO_NOMBRES)
-                    + UtilArchivo.bytesDeCadena(LARGO_APELLIDOS)
-                    + UtilArchivo.bytesDeCadena(LARGO_ESPECIALIDAD)
-                    + UtilArchivo.bytesDeCadena(LARGO_TELEFONO)
-                    + UtilArchivo.bytesDeCadena(LARGO_CORREO)
-                    + Integer.BYTES                                       // horaInicio
-                    + Integer.BYTES                                       // horaFin
-                    + Byte.BYTES;                                         // activo
+              TAM_ENCABEZADO_REGISTRO
+            + Long.BYTES * 2                                      // uuid
+            + UtilArchivo.bytesDeCadena(LARGO_NOMBRES)
+            + UtilArchivo.bytesDeCadena(LARGO_APELLIDOS)
+            + UtilArchivo.bytesDeCadena(LARGO_ESPECIALIDAD)
+            + UtilArchivo.bytesDeCadena(LARGO_TELEFONO)
+            + UtilArchivo.bytesDeCadena(LARGO_CORREO)
+            + Integer.BYTES                                       // horaInicio
+            + Integer.BYTES                                       // horaFin
+            + Byte.BYTES;                                         // activo
+
+    /** Indice ordenado en archivo: UUID -> numero de registro. */
+    private final IndiceOrdenado indice;
 
     public ArchivoMedicos(String ruta) throws IOException {
         super(ruta, TAM_REGISTRO);
+        this.indice = new IndiceOrdenado(rutaDelIndice(ruta));
+        iniciarOrganizacion();
     }
+
+    /** El indice acompana al archivo de datos: medicos.dat -> medicos.idx */
+    private static String rutaDelIndice(String rutaDatos) {
+        int punto = rutaDatos.lastIndexOf('.');
+        String base = (punto < 0) ? rutaDatos : rutaDatos.substring(0, punto);
+        return base + ".idx";
+    }
+
+    @Override
+    public String nombreOrganizacion() {
+        return "Secuencial indexado (busqueda binaria)";
+    }
+
+    // =======================================================================
+    // ORGANIZACION: SECUENCIAL INDEXADO
+    // =======================================================================
+
+    /**
+     * Reconstruye el indice si no concuerda con el archivo de datos. Un indice
+     * es informacion derivada: siempre se puede recalcular desde los datos.
+     */
+    @Override
+    protected void prepararIndice() throws IOException {
+        if (indice.getCantidad() == cantidad()) {
+            return;
+        }
+
+        indice.vaciar();
+        int total = totalRegistros();
+
+        for (int i = 0; i < total; i++) {
+            UUID id = idEn(i);
+            if (id != null) {
+                indice.insertar(id, i);
+            }
+        }
+    }
+
+    /** Busqueda binaria sobre el indice ordenado: O(log n). */
+    @Override
+    protected Integer localizar(UUID id) throws IOException {
+        return indice.buscar(id);
+    }
+
+    @Override
+    protected void indexarInsercion(UUID id, int numeroRegistro) throws IOException {
+        indice.insertar(id, numeroRegistro);
+    }
+
+    @Override
+    protected void indexarEliminacion(UUID id, int numeroRegistro) throws IOException {
+        indice.eliminar(id);
+    }
+
+    @Override
+    protected void cerrarIndice() throws IOException {
+        indice.close();
+    }
+
+    /** Comparaciones maximas de una busqueda; para el reporte tecnico. */
+    public int comparacionesMaximas() {
+        return indice.comparacionesMaximas();
+    }
+
+    // =======================================================================
+    // FORMATO DE LOS CAMPOS
+    // =======================================================================
 
     /** El UUID lo genera el sistema, nunca el usuario. */
     @Override

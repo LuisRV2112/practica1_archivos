@@ -42,6 +42,21 @@ public class ArchivoBitacora extends ArchivoBase<UUID, EntradaBitacora> {
 
     public ArchivoBitacora(String ruta) throws IOException {
         super(ruta, TAM_REGISTRO);
+        iniciarOrganizacion();
+    }
+
+    /**
+     * La bitacora es el caso de libro del archivo SECUENCIAL: solo se anexa al
+     * final, nunca se modifica ni se elimina, y se lee entera de principio a
+     * fin. No necesita indice, porque nunca se busca una entrada suelta por su
+     * identificador; se consulta el historial completo.
+     *
+     * Como consecuencia, el apilo de espacios libres de este archivo siempre
+     * esta vacio, y el orden fisico coincide exactamente con el cronologico.
+     */
+    @Override
+    public String nombreOrganizacion() {
+        return "Secuencial (solo anexar)";
     }
 
     @Override

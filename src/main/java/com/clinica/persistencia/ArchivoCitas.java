@@ -51,6 +51,12 @@ public class ArchivoCitas extends ArchivoBase<UUID, Cita> {
 
     public ArchivoCitas(String ruta) throws IOException {
         super(ruta, TAM_REGISTRO);
+        iniciarOrganizacion();
+    }
+
+    @Override
+    public String nombreOrganizacion() {
+        return "Secuencial";
     }
 
     /** El UUID de la cita lo genera el sistema, nunca el usuario. */
