@@ -100,9 +100,9 @@ public class PanelReportes extends JPanel {
     private final JComboBox<Medico> cboMedico = new JComboBox<>();
     private final JComboBox<Paciente> cboPaciente = new JComboBox<>();
     private final JComboBox<EstadoCita> cboEstado = new JComboBox<>(EstadoCita.values());
-    private final JTextField txtFecha = new JTextField(10);
-    private final JTextField txtDesde = new JTextField(10);
-    private final JTextField txtHasta = new JTextField(10);
+    private final CampoFecha txtFecha = new CampoFecha();
+    private final CampoFecha txtDesde = new CampoFecha();
+    private final CampoFecha txtHasta = new CampoFecha();
 
     private final JButton btnGenerar = new JButton("Generar");
     private final JButton btnExportarCsv = new JButton("Exportar CSV");
@@ -142,14 +142,14 @@ public class PanelReportes extends JPanel {
     private JPanel construirBarraSuperior() {
         JPanel barra = new JPanel(new BorderLayout(6, 6));
 
-        JPanel seleccion = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
+        JPanel seleccion = new JPanel(new FlujoAjustable());
         seleccion.add(new JLabel("Reporte:"));
         seleccion.add(cboReporte);
         seleccion.add(construirPanelParametros());
         seleccion.add(btnGenerar);
         seleccion.setBorder(BorderFactory.createTitledBorder("Seleccion"));
 
-        JPanel exportacion = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
+        JPanel exportacion = new JPanel(new FlujoAjustable());
         exportacion.add(btnExportarCsv);
         exportacion.add(btnExportarTxt);
         exportacion.setBorder(BorderFactory.createTitledBorder("Exportar"));
@@ -169,7 +169,7 @@ public class PanelReportes extends JPanel {
         panelParametros.add(conEtiqueta("Medico:", cboMedico), "medico");
         panelParametros.add(conEtiqueta("Paciente:", cboPaciente), "paciente");
         panelParametros.add(conEtiqueta("Estado:", cboEstado), "estado");
-        panelParametros.add(conEtiqueta("Fecha (dd/MM/aaaa):", txtFecha), "fecha");
+        panelParametros.add(conEtiqueta("Fecha:", txtFecha), "fecha");
 
         JPanel rango = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         rango.add(new JLabel("Desde:"));
@@ -254,12 +254,12 @@ public class PanelReportes extends JPanel {
                     exigirSeleccion(cboEspecialidad.getSelectedItem(), "una especialidad").toString());
             case MEDICOS_MAS_CITAS -> servicio.medicosConMasCitas();
             case MEDICOS_CITAS_EN_FECHA -> servicio.medicosConCitasEnFecha(
-                    ServicioPacientes.interpretarFecha(txtFecha.getText(), "La fecha"));
+                    ServicioPacientes.interpretarFecha(txtFecha.getTexto(), "La fecha"));
 
             case CITAS_COMPLETO -> servicio.citasCompleto();
             case CITAS_POR_RANGO -> servicio.citasPorRango(
-                    ServicioPacientes.interpretarFecha(txtDesde.getText(), "La fecha inicial"),
-                    ServicioPacientes.interpretarFecha(txtHasta.getText(), "La fecha final"));
+                    ServicioPacientes.interpretarFecha(txtDesde.getTexto(), "La fecha inicial"),
+                    ServicioPacientes.interpretarFecha(txtHasta.getTexto(), "La fecha final"));
             case CITAS_POR_MEDICO -> servicio.citasPorMedico(
                     (Medico) exigirSeleccion(cboMedico.getSelectedItem(), "un medico"));
             case CITAS_POR_PACIENTE -> servicio.citasPorPaciente(

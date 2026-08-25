@@ -42,7 +42,7 @@ public class PanelPacientes extends JPanel {
     private final JTextField txtIdentificacion = new JTextField(18);
     private final JTextField txtNombres = new JTextField(18);
     private final JTextField txtApellidos = new JTextField(18);
-    private final JTextField txtNacimiento = new JTextField(18);
+    private final CampoFecha txtNacimiento = new CampoFecha();
     private final JComboBox<Sexo> cboSexo = new JComboBox<>(Sexo.values());
     private final JTextField txtTelefono = new JTextField(18);
     private final JTextField txtCorreo = new JTextField(18);
@@ -53,7 +53,7 @@ public class PanelPacientes extends JPanel {
     private final JButton btnBaja = new JButton("Dar de baja / Reactivar");
 
     // --- Filtros ---
-    private final JTextField txtBuscar = new JTextField(20);
+    private final JTextField txtBuscar = new JTextField(16);
     private final JComboBox<String> cboFiltroSangre = new JComboBox<>();
     private final JComboBox<String> cboFiltroEstado =
             new JComboBox<>(new String[]{"Todos", "Activos", "De baja"});
@@ -78,6 +78,8 @@ public class PanelPacientes extends JPanel {
         add(construirFormulario(), BorderLayout.WEST);
         add(construirZonaTabla(), BorderLayout.CENTER);
 
+        txtBuscar.setToolTipText("Busca por identificacion, nombre o apellido. Presione Enter.");
+
         conectarEventos();
         refrescar();
     }
@@ -99,7 +101,7 @@ public class PanelPacientes extends JPanel {
         agregarCampo(panel, g, fila++, "Identificacion *", txtIdentificacion);
         agregarCampo(panel, g, fila++, "Nombres *", txtNombres);
         agregarCampo(panel, g, fila++, "Apellidos *", txtApellidos);
-        agregarCampo(panel, g, fila++, "Nacimiento * (dd/MM/aaaa)", txtNacimiento);
+        agregarCampo(panel, g, fila++, "Nacimiento *", txtNacimiento);
         agregarCampo(panel, g, fila++, "Sexo *", cboSexo);
         agregarCampo(panel, g, fila++, "Telefono", txtTelefono);
         agregarCampo(panel, g, fila++, "Correo", txtCorreo);
@@ -143,9 +145,9 @@ public class PanelPacientes extends JPanel {
     private JPanel construirZonaTabla() {
         JPanel panel = new JPanel(new BorderLayout(6, 6));
 
-        JPanel filtros = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
+        JPanel filtros = new JPanel(new FlujoAjustable());
         filtros.setBorder(BorderFactory.createTitledBorder("Busqueda y filtros"));
-        filtros.add(new JLabel("Buscar (identificacion, nombre o apellido):"));
+        filtros.add(new JLabel("Buscar:"));
         filtros.add(txtBuscar);
         filtros.add(new JLabel("Tipo de sangre:"));
         filtros.add(cboFiltroSangre);
@@ -298,7 +300,7 @@ public class PanelPacientes extends JPanel {
 
     private Paciente leerFormulario() throws ExcepcionValidacion {
         LocalDate nacimiento = ServicioPacientes.interpretarFecha(
-                txtNacimiento.getText(), "La fecha de nacimiento");
+                txtNacimiento.getTexto(), "La fecha de nacimiento");
 
         return new Paciente(
                 txtIdentificacion.getText(),
@@ -323,7 +325,7 @@ public class PanelPacientes extends JPanel {
         txtIdentificacion.setEditable(false); // la llave no se puede cambiar
         txtNombres.setText(p.getNombres());
         txtApellidos.setText(p.getApellidos());
-        txtNacimiento.setText(ServicioPacientes.formatearFecha(p.getFechaNacimiento()));
+        txtNacimiento.setFecha(p.getFechaNacimiento());
         cboSexo.setSelectedItem(p.getSexo());
         txtTelefono.setText(p.getTelefono());
         txtCorreo.setText(p.getCorreo());
@@ -339,7 +341,7 @@ public class PanelPacientes extends JPanel {
         txtIdentificacion.setEditable(true);
         txtNombres.setText("");
         txtApellidos.setText("");
-        txtNacimiento.setText("");
+        txtNacimiento.limpiar();
         cboSexo.setSelectedIndex(0);
         txtTelefono.setText("");
         txtCorreo.setText("");

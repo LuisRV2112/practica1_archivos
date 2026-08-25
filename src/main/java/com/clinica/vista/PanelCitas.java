@@ -54,8 +54,8 @@ public class PanelCitas extends JPanel {
     // --- Formulario ---
     private final JComboBox<Paciente> cboPaciente = new JComboBox<>();
     private final JComboBox<Medico> cboMedico = new JComboBox<>();
-    private final JTextField txtFecha = new JTextField(18);
-    private final JTextField txtHora = new JTextField(18);
+    private final CampoFecha txtFecha = new CampoFecha();
+    private final CampoHora txtHora = new CampoHora(java.time.LocalTime.of(9, 0));
     private final JTextField txtMotivo = new JTextField(18);
     private final JTextArea txtObservaciones = new JTextArea(4, 18);
 
@@ -67,7 +67,7 @@ public class PanelCitas extends JPanel {
     private final JButton btnEliminar = new JButton("Eliminar cita");
 
     // --- Filtros ---
-    private final JTextField txtFiltroFecha = new JTextField(10);
+    private final CampoFecha txtFiltroFecha = new CampoFecha();
     private final JComboBox<String> cboFiltroEstado =
             new JComboBox<>(new String[]{"Todos", "Programada", "Atendida", "Cancelada"});
     private final JComboBox<Object> cboFiltroMedico = new JComboBox<>();
@@ -119,8 +119,8 @@ public class PanelCitas extends JPanel {
         int fila = 0;
         agregarCampo(panel, g, fila++, "Paciente *", cboPaciente);
         agregarCampo(panel, g, fila++, "Medico *", cboMedico);
-        agregarCampo(panel, g, fila++, "Fecha * (dd/MM/aaaa)", txtFecha);
-        agregarCampo(panel, g, fila++, "Hora * (HH:mm)", txtHora);
+        agregarCampo(panel, g, fila++, "Fecha *", txtFecha);
+        agregarCampo(panel, g, fila++, "Hora *", txtHora);
         agregarCampo(panel, g, fila++, "Motivo *", txtMotivo);
 
         txtObservaciones.setLineWrap(true);
@@ -180,7 +180,7 @@ public class PanelCitas extends JPanel {
     private JPanel construirZonaTabla() {
         JPanel panel = new JPanel(new BorderLayout(6, 6));
 
-        JPanel filtros = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
+        JPanel filtros = new JPanel(new FlujoAjustable());
         filtros.setBorder(BorderFactory.createTitledBorder("Filtros"));
         filtros.add(new JLabel("Fecha:"));
         filtros.add(txtFiltroFecha);
@@ -222,7 +222,7 @@ public class PanelCitas extends JPanel {
         btnCancelar.addActionListener(e -> cancelarCita());
         btnEliminar.addActionListener(e -> eliminarCita());
 
-        txtFiltroFecha.addActionListener(e -> refrescar());
+        txtFiltroFecha.alPresionarEnter(e -> refrescar());
         cboFiltroEstado.addActionListener(e -> refrescar());
         cboFiltroMedico.addActionListener(e -> refrescar());
         cboFiltroPaciente.addActionListener(e -> refrescar());
@@ -254,9 +254,9 @@ public class PanelCitas extends JPanel {
             }
 
             LocalDate fecha = ServicioPacientes.interpretarFecha(
-                    txtFecha.getText(), "La fecha de la cita");
+                    txtFecha.getTexto(), "La fecha de la cita");
             LocalTime hora = ServicioMedicos.interpretarHora(
-                    txtHora.getText(), "La hora de la cita");
+                    txtHora.getTexto(), "La hora de la cita");
 
             Cita cita = new Cita(null, paciente.getIdentificacion(), medico.getId(),
                     fecha, hora, txtMotivo.getText(), null, txtObservaciones.getText());
@@ -426,14 +426,14 @@ public class PanelCitas extends JPanel {
             List<Cita> resultado = servicio.listar();
 
             // Filtro por fecha (solo si el texto es una fecha valida)
-            String textoFecha = txtFiltroFecha.getText().trim();
+            String textoFecha = txtFiltroFecha.getTexto();
             if (!textoFecha.isEmpty()) {
                 try {
                     LocalDate fecha = ServicioPacientes.interpretarFecha(textoFecha, "La fecha");
                     resultado.removeIf(c -> !fecha.equals(c.getFecha()));
                 } catch (ExcepcionValidacion ex) {
                     advertir(ex);
-                    txtFiltroFecha.setText("");
+                    txtFiltroFecha.limpiar();
                 }
             }
 
@@ -501,8 +501,8 @@ public class PanelCitas extends JPanel {
         idSeleccionada = cita.getId();
         txtMotivo.setText(cita.getMotivo());
         txtObservaciones.setText(cita.getObservaciones());
-        txtFecha.setText(ServicioPacientes.formatearFecha(cita.getFecha()));
-        txtHora.setText(ServicioMedicos.formatearHora(cita.getHoraInicio()));
+        txtFecha.setFecha(cita.getFecha());
+        txtHora.setHora(cita.getHoraInicio());
 
         informar("Cita seleccionada: " + cita.getEstado() + ".");
     }
@@ -510,8 +510,8 @@ public class PanelCitas extends JPanel {
     private void limpiarFormulario() {
         idSeleccionada = null;
 
-        txtFecha.setText("");
-        txtHora.setText("");
+        txtFecha.limpiar();
+        txtHora.setHora(java.time.LocalTime.of(9, 0));
         txtMotivo.setText("");
         txtObservaciones.setText("");
 
@@ -520,7 +520,7 @@ public class PanelCitas extends JPanel {
     }
 
     private void limpiarFiltros() {
-        txtFiltroFecha.setText("");
+        txtFiltroFecha.limpiar();
         cboFiltroEstado.setSelectedIndex(0);
         if (cboFiltroMedico.getItemCount() > 0) {
             cboFiltroMedico.setSelectedIndex(0);

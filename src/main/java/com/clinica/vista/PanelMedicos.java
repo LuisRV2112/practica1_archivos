@@ -43,8 +43,8 @@ public class PanelMedicos extends JPanel {
     private final JTextField txtEspecialidad = new JTextField(18);
     private final JTextField txtTelefono = new JTextField(18);
     private final JTextField txtCorreo = new JTextField(18);
-    private final JTextField txtHoraInicio = new JTextField(18);
-    private final JTextField txtHoraFin = new JTextField(18);
+    private final CampoHora txtHoraInicio = new CampoHora(java.time.LocalTime.of(8, 0));
+    private final CampoHora txtHoraFin = new CampoHora(java.time.LocalTime.of(16, 0));
     private final JCheckBox chkActivo = new JCheckBox("Medico activo", true);
 
     private final JButton btnGuardar = new JButton("Guardar");
@@ -101,8 +101,8 @@ public class PanelMedicos extends JPanel {
         agregarCampo(panel, g, fila++, "Especialidad *", txtEspecialidad);
         agregarCampo(panel, g, fila++, "Telefono", txtTelefono);
         agregarCampo(panel, g, fila++, "Correo", txtCorreo);
-        agregarCampo(panel, g, fila++, "Hora inicio * (HH:mm)", txtHoraInicio);
-        agregarCampo(panel, g, fila++, "Hora fin * (HH:mm)", txtHoraFin);
+        agregarCampo(panel, g, fila++, "Hora inicio *", txtHoraInicio);
+        agregarCampo(panel, g, fila++, "Hora fin *", txtHoraFin);
 
         g.gridx = 0;
         g.gridy = fila++;
@@ -131,7 +131,7 @@ public class PanelMedicos extends JPanel {
     }
 
     private void agregarCampo(JPanel panel, GridBagConstraints g, int fila,
-                              String etiqueta, JTextField campo) {
+                              String etiqueta, java.awt.Component campo) {
         g.gridx = 0;
         g.gridy = fila;
         g.gridwidth = 1;
@@ -146,7 +146,7 @@ public class PanelMedicos extends JPanel {
     private JPanel construirZonaTabla() {
         JPanel panel = new JPanel(new BorderLayout(6, 6));
 
-        JPanel filtros = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
+        JPanel filtros = new JPanel(new FlujoAjustable());
         filtros.setBorder(BorderFactory.createTitledBorder("Busqueda y filtros"));
         filtros.add(new JLabel("Buscar:"));
         filtros.add(txtBuscar);
@@ -313,10 +313,12 @@ public class PanelMedicos extends JPanel {
     // =======================================================================
 
     private Medico leerFormulario() throws ExcepcionValidacion {
+        // El componente no permite construir una hora invalida, pero se sigue
+        // pasando por el servicio para que la validacion viva en un solo lugar.
         LocalTime inicio = ServicioMedicos.interpretarHora(
-                txtHoraInicio.getText(), "La hora de inicio");
+                txtHoraInicio.getTexto(), "La hora de inicio");
         LocalTime fin = ServicioMedicos.interpretarHora(
-                txtHoraFin.getText(), "La hora de finalizacion");
+                txtHoraFin.getTexto(), "La hora de finalizacion");
 
         return new Medico(
                 null,
@@ -342,8 +344,8 @@ public class PanelMedicos extends JPanel {
         txtEspecialidad.setText(m.getEspecialidad());
         txtTelefono.setText(m.getTelefono());
         txtCorreo.setText(m.getCorreo());
-        txtHoraInicio.setText(ServicioMedicos.formatearHora(m.getHoraInicio()));
-        txtHoraFin.setText(ServicioMedicos.formatearHora(m.getHoraFin()));
+        txtHoraInicio.setHora(m.getHoraInicio());
+        txtHoraFin.setHora(m.getHoraFin());
         chkActivo.setSelected(m.isActivo());
 
         btnGuardar.setText("Guardar cambios");
@@ -357,8 +359,8 @@ public class PanelMedicos extends JPanel {
         txtEspecialidad.setText("");
         txtTelefono.setText("");
         txtCorreo.setText("");
-        txtHoraInicio.setText("");
-        txtHoraFin.setText("");
+        txtHoraInicio.setHora(java.time.LocalTime.of(8, 0));
+        txtHoraFin.setHora(java.time.LocalTime.of(16, 0));
         chkActivo.setSelected(true);
 
         btnGuardar.setText("Guardar");
