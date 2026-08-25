@@ -179,25 +179,30 @@ public class ServicioCitas {
         return archivo.buscarPorId(id);
     }
 
+    /**
+     * Citas de un paciente.
+     *
+     * No recorre el archivo completo: sigue el ANILLO DEL PACIENTE, leyendo
+     * unicamente los registros que le pertenecen. Con 10000 citas de las cuales
+     * 4 son suyas, se hacen 4 lecturas en lugar de 10000.
+     */
     public List<Cita> listarPorPaciente(String identificacion) throws IOException {
-        String buscada = normalizar(identificacion);
-        List<Cita> resultado = new ArrayList<>();
-        for (Cita c : listar()) {
-            if (c.getIdentificacionPaciente().equals(buscada)) {
-                resultado.add(c);
-            }
-        }
+        List<Cita> resultado = archivo.citasDelPaciente(normalizar(identificacion));
+        ordenarPorFecha(resultado);
         return resultado;
     }
 
+    /** Citas de un medico, siguiendo su anillo. Mismo razonamiento que el anterior. */
     public List<Cita> listarPorMedico(UUID idMedico) throws IOException {
-        List<Cita> resultado = new ArrayList<>();
-        for (Cita c : listar()) {
-            if (c.getIdMedico().equals(idMedico)) {
-                resultado.add(c);
-            }
-        }
+        List<Cita> resultado = archivo.citasDelMedico(idMedico);
+        ordenarPorFecha(resultado);
         return resultado;
+    }
+
+    private static void ordenarPorFecha(List<Cita> citas) {
+        citas.sort(Comparator
+                .comparing(Cita::getFecha)
+                .thenComparing(Cita::getHoraInicio));
     }
 
     public List<Cita> listarPorFecha(LocalDate fecha) throws IOException {

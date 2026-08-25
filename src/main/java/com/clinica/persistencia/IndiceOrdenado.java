@@ -120,6 +120,21 @@ public class IndiceOrdenado implements Closeable {
         escribirCabecera();
     }
 
+    /**
+     * Cambia el valor asociado a una clave, o la inserta si no estaba.
+     * Lo usa el multianillo para mover la cabeza de un anillo.
+     */
+    public void actualizar(UUID clave, int numeroRegistro) throws IOException {
+        int posicion = posicionDeClave(clave);
+
+        if (posicion < 0) {
+            insertar(clave, numeroRegistro);
+            return;
+        }
+        archivo.seek(posicionDe(posicion) + Long.BYTES * 2);
+        archivo.writeInt(numeroRegistro);
+    }
+
     /** Elimina una clave cerrando el hueco que deja. */
     public void eliminar(UUID clave) throws IOException {
         int posicion = posicionDeClave(clave);

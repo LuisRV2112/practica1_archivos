@@ -141,6 +141,34 @@ public class IndiceHash implements Closeable {
         escribirCabecera();
     }
 
+    /**
+     * Cambia el valor asociado a una clave, o la inserta si no estaba.
+     * Lo usa el multianillo para mover la cabeza de un anillo.
+     */
+    public void actualizar(String clave, int numeroRegistro) throws IOException {
+        String llave = normalizar(clave);
+        int cubeta = cubetaDe(llave);
+
+        for (int intento = 0; intento < capacidad; intento++) {
+            int actual = (cubeta + intento) % capacidad;
+
+            archivo.seek(posicionDe(actual));
+            byte estado = archivo.readByte();
+
+            if (estado == CUBETA_LIBRE) {
+                break; // no estaba
+            }
+            if (estado == CUBETA_OCUPADA) {
+                String guardada = UtilArchivo.leerCadena(archivo, largoClave);
+                if (guardada.equals(llave)) {
+                    archivo.writeInt(numeroRegistro);
+                    return;
+                }
+            }
+        }
+        insertar(llave, numeroRegistro);
+    }
+
     /** Marca la clave como borrada dejando una lapida. */
     public void eliminar(String clave) throws IOException {
         String llave = normalizar(clave);

@@ -64,12 +64,14 @@ import java.util.List;
 public abstract class ArchivoBase<ID, T> implements Closeable {
 
     /**
-     * Version del formato. Se subio a 2 al introducir las distintas
-     * organizaciones de archivo y el campo "activo" del paciente: los archivos
-     * de la version 1 ya no son compatibles y el sistema los rechaza en lugar
-     * de leerlos mal.
+     * Version del formato. Se sube cada vez que cambia la disposicion de los
+     * bytes, para que el sistema RECHACE un archivo viejo en lugar de leerlo
+     * mal y mostrar datos corruptos.
+     *
+     *   v2: distintas organizaciones de archivo y campo "activo" del paciente
+     *   v3: enlaces de anillo en el registro de cita (multianillo)
      */
-    private static final int VERSION_FORMATO = 2;
+    private static final int VERSION_FORMATO = 3;
 
     private static final int TAM_CABECERA = Integer.BYTES * 3;
 
