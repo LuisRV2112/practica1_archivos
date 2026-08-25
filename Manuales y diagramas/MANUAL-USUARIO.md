@@ -51,6 +51,7 @@ La aplicación se organiza en cuatro pestañas y un menú superior.
 | **Citas** | Programar y dar seguimiento a las consultas |
 | **Reportes** | Consultar y exportar la información del sistema |
 
+![Ventana al abrir el programa](SS/ventanaprograma.png)
 El menú **Datos** permite cargar información desde archivos CSV, y el menú
 **Ayuda** muestra el formato que deben tener esos archivos.
 
@@ -85,6 +86,7 @@ Presione **Guardar**. El código del médico lo genera el sistema automáticamen
 Seleccione el médico en la tabla de la derecha. Sus datos se cargarán en el
 formulario y el botón cambiará a **Guardar cambios**. Modifique lo necesario y
 presione el botón.
+![Ventana al abrir el programa](SS/modificarmed.png)
 
 > Si intenta cambiar el horario de atención y el médico tiene citas ya
 > programadas que quedarían fuera del nuevo horario, el sistema no lo permitirá y
@@ -118,7 +120,7 @@ Para ver todo de nuevo, deje la búsqueda vacía y presione Enter.
   ocho dígitos) o presione el botón **...** para abrir un calendario
 - **Sexo** y **Tipo de sangre** se eligen de las listas
 - **Teléfono** y **Correo** son opcionales
-
+  ![Ventana al abrir el programa](SS/pacientes.png)
 ### El calendario
 
 Al presionar **...** se abre un calendario donde puede:
@@ -127,7 +129,7 @@ Al presionar **...** se abre un calendario donde puede:
 - Cambiar de año con las flechas del control numérico
 - Presionar **Hoy** para elegir la fecha actual
 - Hacer clic en cualquier día para seleccionarlo
-
+  ![Ventana al abrir el programa](SS/calendar.png)
 ### Modificar un paciente
 
 Selecciónelo en la tabla. Note que el campo de **Identificación se bloquea**:
@@ -175,7 +177,7 @@ verificará automáticamente que:
 
 Si algo no se cumple, aparecerá un mensaje explicando exactamente cuál es el
 problema.
-
+![Ventana al abrir el programa](SS/citas.png)
 ### Dar seguimiento
 
 Seleccione una cita en la tabla y use los botones de la sección inferior:
@@ -234,7 +236,7 @@ Los reportes disponibles son:
 **Bitácora**
 - Todas las operaciones realizadas en el sistema, de la más reciente a la más
   antigua
-
+  ![Ventana al abrir el programa](SS/reportes.png)
 ### Exportar
 
 Con un reporte ya generado, presione **Exportar CSV** o **Exportar TXT**, elija
@@ -295,7 +297,7 @@ apellidos.
 
 **Cargue en este orden: médicos, luego pacientes, luego citas.** Una cita
 necesita que ambos ya existan.
-
+![Ventana al abrir el programa](SS/cargas.png)
 ### Si hay filas rechazadas
 
 Las filas válidas **sí se cargan**; solo se rechazan las que tienen problemas. El

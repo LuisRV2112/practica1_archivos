@@ -2,7 +2,8 @@
 ## Sistema de Gestión de Clínica Médica
 
 Universidad de San Carlos de Guatemala — Centro Universitario de Occidente
-Ingeniería en Ciencias y Sistemas — Manejo e Implementación de Archivos
+Ingeniería en Ciencias y Sistemas — Manejo e Implementación de Archivos  
+Luis Alejandro Regalado - 202131920
 
 ---
 
