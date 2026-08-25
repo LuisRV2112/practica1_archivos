@@ -325,6 +325,11 @@ public class ServicioCitas {
                     "No existe un paciente con la identificacion "
                             + cita.getIdentificacionPaciente() + ".");
         }
+        if (esNueva && !paciente.isActivo()) {
+            throw new ExcepcionValidacion(
+                    "El paciente " + paciente.getNombreCompleto()
+                            + " esta dado de baja y no puede recibir citas nuevas.");
+        }
 
         // --- El medico debe existir y estar activo ---
         Medico medico = archivoMedicos.buscarPorId(cita.getIdMedico());

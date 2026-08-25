@@ -50,11 +50,13 @@ public class PanelPacientes extends JPanel {
 
     private final JButton btnGuardar = new JButton("Guardar");
     private final JButton btnLimpiar = new JButton("Limpiar");
-    private final JButton btnEliminar = new JButton("Eliminar seleccionado");
+    private final JButton btnBaja = new JButton("Dar de baja / Reactivar");
 
     // --- Filtros ---
     private final JTextField txtBuscar = new JTextField(20);
     private final JComboBox<String> cboFiltroSangre = new JComboBox<>();
+    private final JComboBox<String> cboFiltroEstado =
+            new JComboBox<>(new String[]{"Todos", "Activos", "De baja"});
 
     // --- Tabla ---
     private final ModeloTablaPacientes modeloTabla = new ModeloTablaPacientes();
@@ -113,7 +115,7 @@ public class PanelPacientes extends JPanel {
         panel.add(botones, g);
 
         g.gridy = fila++;
-        panel.add(btnEliminar, g);
+        panel.add(btnBaja, g);
 
         g.gridy = fila++;
         panel.add(new JLabel("<html><i>Los campos con * son obligatorios.</i></html>"), g);
@@ -147,6 +149,8 @@ public class PanelPacientes extends JPanel {
         filtros.add(txtBuscar);
         filtros.add(new JLabel("Tipo de sangre:"));
         filtros.add(cboFiltroSangre);
+        filtros.add(new JLabel("Estado:"));
+        filtros.add(cboFiltroEstado);
 
         cboFiltroSangre.addItem("Todos");
         for (TipoSangre tipo : TipoSangre.values()) {
@@ -175,10 +179,11 @@ public class PanelPacientes extends JPanel {
     private void conectarEventos() {
         btnGuardar.addActionListener(e -> guardar());
         btnLimpiar.addActionListener(e -> limpiarFormulario());
-        btnEliminar.addActionListener(e -> eliminarSeleccionado());
+        btnBaja.addActionListener(e -> alternarEstadoSeleccionado());
 
         txtBuscar.addActionListener(e -> refrescar());
         cboFiltroSangre.addActionListener(e -> refrescar());
+        cboFiltroEstado.addActionListener(e -> refrescar());
 
         tabla.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
@@ -215,7 +220,13 @@ public class PanelPacientes extends JPanel {
         }
     }
 
-    private void eliminarSeleccionado() {
+    /**
+     * Da de baja o reactiva al paciente seleccionado.
+     *
+     * No hay eliminacion fisica a proposito: el expediente se conserva para no
+     * dejar huerfanas las citas que lo referencian.
+     */
+    private void alternarEstadoSeleccionado() {
         Paciente seleccionado = pacienteSeleccionado();
         if (seleccionado == null) {
             JOptionPane.showMessageDialog(this,
@@ -224,17 +235,25 @@ public class PanelPacientes extends JPanel {
             return;
         }
 
+        boolean darDeBaja = seleccionado.isActivo();
+
         int respuesta = JOptionPane.showConfirmDialog(this,
-                "Eliminar al paciente " + seleccionado.getNombreCompleto() + "?",
-                "Confirmar eliminacion", JOptionPane.YES_NO_OPTION);
+                (darDeBaja ? "Dar de baja a " : "Reactivar a ")
+                        + seleccionado.getNombreCompleto() + "?",
+                "Confirmar", JOptionPane.YES_NO_OPTION);
 
         if (respuesta != JOptionPane.YES_OPTION) {
             return;
         }
 
         try {
-            servicio.eliminar(seleccionado.getIdentificacion());
-            informar("Paciente eliminado.");
+            if (darDeBaja) {
+                servicio.darDeBaja(seleccionado.getIdentificacion());
+                informar("Paciente dado de baja. Su expediente se conserva.");
+            } else {
+                servicio.reactivar(seleccionado.getIdentificacion());
+                informar("Paciente reactivado.");
+            }
             limpiarFormulario();
             refrescar();
 
@@ -254,6 +273,13 @@ public class PanelPacientes extends JPanel {
             if (filtroSangre != null && !"Todos".equals(filtroSangre)) {
                 resultado.removeIf(p -> p.getTipoSangre() == null
                         || !p.getTipoSangre().getEtiqueta().equals(filtroSangre.toString()));
+            }
+
+            int filtroEstado = cboFiltroEstado.getSelectedIndex();
+            if (filtroEstado == 1) {
+                resultado.removeIf(p -> !p.isActivo());
+            } else if (filtroEstado == 2) {
+                resultado.removeIf(Paciente::isActivo);
             }
 
             modeloTabla.establecerDatos(resultado);

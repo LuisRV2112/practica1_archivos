@@ -26,12 +26,35 @@ public class Paciente {
 
     private TipoSangre tipoSangre;
 
+    /**
+     * Estado del paciente en la clinica: activo o dado de baja.
+     *
+     * Este campo vive en el DOMINIO, no en la capa de persistencia. La
+     * diferencia no es cosmetica: el byte de "registro vivo / borrado" del
+     * archivo es un detalle de como se guardan los bytes, mientras que dar de
+     * baja a un paciente es un hecho del negocio que la clinica necesita
+     * consultar, filtrar y reportar. Por eso se modela aqui.
+     *
+     * Dar de baja es un borrado logico: el expediente se conserva y sus citas
+     * historicas siguen apuntando a un paciente que existe.
+     */
+    private boolean activo = true;
+
     public Paciente() {
+    }
+
+    /** Constructor para un paciente nuevo, que nace activo. */
+    public Paciente(String identificacion, String nombres, String apellidos,
+                    LocalDate fechaNacimiento, Sexo sexo, String telefono,
+                    String correo, TipoSangre tipoSangre) {
+        this(identificacion, nombres, apellidos, fechaNacimiento, sexo,
+                telefono, correo, tipoSangre, true);
     }
 
     public Paciente(String identificacion, String nombres, String apellidos,
                     LocalDate fechaNacimiento, Sexo sexo, String telefono,
-                    String correo, TipoSangre tipoSangre) {
+                    String correo, TipoSangre tipoSangre, boolean activo) {
+        this.activo = activo;
         this.identificacion = identificacion;
         this.nombres = nombres;
         this.apellidos = apellidos;
@@ -106,6 +129,14 @@ public class Paciente {
         this.tipoSangre = tipoSangre;
     }
 
+    public boolean isActivo() {
+        return activo;
+    }
+
+    public void setActivo(boolean activo) {
+        this.activo = activo;
+    }
+
     public String getNombreCompleto() {
         return nombres + " " + apellidos;
     }
@@ -126,6 +157,7 @@ public class Paciente {
     @Override
     public String toString() {
         return identificacion + " - " + getNombreCompleto()
-                + " (" + (tipoSangre == null ? "?" : tipoSangre.getEtiqueta()) + ")";
+                + " (" + (tipoSangre == null ? "?" : tipoSangre.getEtiqueta()) + ")"
+                + (activo ? "" : " [DE BAJA]");
     }
 }

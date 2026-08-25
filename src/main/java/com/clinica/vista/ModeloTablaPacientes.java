@@ -16,7 +16,7 @@ public class ModeloTablaPacientes extends AbstractTableModel {
 
     private static final String[] COLUMNAS = {
             "Identificacion", "Nombres", "Apellidos", "Nacimiento",
-            "Edad", "Sexo", "Telefono", "Correo", "Sangre"
+            "Edad", "Sexo", "Telefono", "Correo", "Sangre", "Estado"
     };
 
     private List<Paciente> pacientes = new ArrayList<>();
@@ -67,6 +67,7 @@ public class ModeloTablaPacientes extends AbstractTableModel {
             case 6 -> p.getTelefono();
             case 7 -> p.getCorreo();
             case 8 -> p.getTipoSangre() == null ? "" : p.getTipoSangre().getEtiqueta();
+            case 9 -> p.isActivo() ? "Activo" : "De baja";
             default -> "";
         };
     }

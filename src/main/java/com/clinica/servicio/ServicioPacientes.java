@@ -1,6 +1,7 @@
 package com.clinica.servicio;
 
 import com.clinica.modelo.Cita;
+import com.clinica.modelo.EstadoCita;
 import com.clinica.modelo.Paciente;
 import com.clinica.modelo.TipoOperacion;
 import com.clinica.modelo.TipoSangre;
@@ -89,6 +90,14 @@ public class ServicioPacientes {
     public void modificar(Paciente paciente) throws ExcepcionValidacion, IOException {
         validar(paciente);
 
+        // El formulario no edita el estado: se conserva el que ya tenia el
+        // registro para que una modificacion normal no reactive por accidente
+        // a un paciente dado de baja.
+        Paciente anterior = archivo.buscarPorId(paciente.getIdentificacion());
+        if (anterior != null) {
+            paciente.setActivo(anterior.isActivo());
+        }
+
         if (!archivo.actualizar(paciente)) {
             throw new ExcepcionValidacion("El paciente ya no existe en el archivo.");
         }
@@ -99,40 +108,84 @@ public class ServicioPacientes {
     }
 
     /**
-     * Elimina un paciente, siempre que no tenga citas registradas.
+     * Da de baja a un paciente: BORRADO LOGICO EN LA CAPA DE DOMINIO.
      *
-     * Borrarlo con citas dejaria el archivo de citas apuntando a alguien que ya
-     * no existe: registros huerfanos que el sistema no sabria como mostrar. Es
-     * la integridad referencial que en una base de datos haria el motor, y que
-     * aqui toca garantizar a mano.
+     * El expediente NO se borra del archivo. Se marca como inactivo y sigue
+     * ahi, por dos razones:
+     *
+     *   1. Integridad referencial. Sus citas historicas guardan su numero de
+     *      identificacion; si el registro desapareciera, esas citas quedarian
+     *      huerfanas, apuntando a alguien que ya no existe. En una base de
+     *      datos eso lo impide el motor; aqui hay que garantizarlo a mano.
+     *
+     *   2. Valor clinico. El historial de un paciente no se tira; se archiva.
+     *
+     * Si el paciente tiene citas PROGRAMADAS (todavia pendientes) la baja se
+     * rechaza: primero hay que atenderlas o cancelarlas, o la clinica quedaria
+     * con citas agendadas para alguien que ya no es paciente.
      */
-    public void eliminar(String identificacion) throws ExcepcionValidacion, IOException {
+    public void darDeBaja(String identificacion) throws ExcepcionValidacion, IOException {
         String id = normalizar(identificacion);
 
-        int citasDelPaciente = 0;
+        Paciente paciente = archivo.buscarPorId(id);
+        if (paciente == null) {
+            throw new ExcepcionValidacion("No se encontro el paciente indicado.");
+        }
+        if (!paciente.isActivo()) {
+            throw new ExcepcionValidacion("El paciente ya estaba dado de baja.");
+        }
+
+        int programadas = 0;
         for (Cita cita : archivoCitas.listarTodos()) {
-            if (id.equals(cita.getIdentificacionPaciente())) {
-                citasDelPaciente++;
+            if (id.equals(cita.getIdentificacionPaciente())
+                    && cita.getEstado() == EstadoCita.PROGRAMADA) {
+                programadas++;
             }
         }
 
-        if (citasDelPaciente > 0) {
+        if (programadas > 0) {
             throw new ExcepcionValidacion(
-                    "No se puede eliminar el paciente porque tiene "
-                            + citasDelPaciente
-                            + (citasDelPaciente == 1 ? " cita registrada." : " citas registradas.")
-                            + "\nElimine primero sus citas.");
+                    "No se puede dar de baja al paciente porque tiene "
+                            + programadas
+                            + (programadas == 1 ? " cita programada." : " citas programadas.")
+                            + "\nAtiendalas o cancelelas primero.");
         }
+
+        paciente.setActivo(false);
+        archivo.actualizar(paciente);
+
+        bitacora.registrar(ServicioBitacora.MODULO_PACIENTES, TipoOperacion.CAMBIO_ESTADO,
+                "Se dio de baja al paciente " + paciente.getNombreCompleto() + " (" + id + ")");
+    }
+
+    /** Reactiva a un paciente dado de baja. */
+    public void reactivar(String identificacion) throws ExcepcionValidacion, IOException {
+        String id = normalizar(identificacion);
 
         Paciente paciente = archivo.buscarPorId(id);
-
-        if (!archivo.eliminar(id)) {
+        if (paciente == null) {
             throw new ExcepcionValidacion("No se encontro el paciente indicado.");
         }
+        if (paciente.isActivo()) {
+            throw new ExcepcionValidacion("El paciente ya estaba activo.");
+        }
 
-        bitacora.registrar(ServicioBitacora.MODULO_PACIENTES, TipoOperacion.ELIMINACION,
-                "Se elimino al paciente "
-                        + (paciente == null ? id : paciente.getNombreCompleto() + " (" + id + ")"));
+        paciente.setActivo(true);
+        archivo.actualizar(paciente);
+
+        bitacora.registrar(ServicioBitacora.MODULO_PACIENTES, TipoOperacion.CAMBIO_ESTADO,
+                "Se reactivo al paciente " + paciente.getNombreCompleto() + " (" + id + ")");
+    }
+
+    /** Pacientes activos o dados de baja, segun se pida. */
+    public List<Paciente> listarPorEstado(boolean activo) throws IOException {
+        List<Paciente> resultado = new ArrayList<>();
+        for (Paciente p : listar()) {
+            if (p.isActivo() == activo) {
+                resultado.add(p);
+            }
+        }
+        return resultado;
     }
 
     // =======================================================================
@@ -152,7 +205,7 @@ public class ServicioPacientes {
         return archivo.buscarPorId(normalizar(identificacion));
     }
 
-    public boolean existe(String identificacion) {
+    public boolean existe(String identificacion) throws IOException {
         return archivo.existe(normalizar(identificacion));
     }
 
