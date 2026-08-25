@@ -246,6 +246,11 @@ public class PanelMedicos extends JPanel {
         }
     }
 
+    /** Vuelve a consultar el archivo. Lo usa la carga masiva al terminar. */
+    public void recargar() {
+        refrescar();
+    }
+
     /** Vuelve a consultar el archivo aplicando los filtros activos. */
     private void refrescar() {
         try {

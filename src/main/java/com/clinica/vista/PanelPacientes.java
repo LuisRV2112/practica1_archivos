@@ -267,6 +267,11 @@ public class PanelPacientes extends JPanel {
         }
     }
 
+    /** Vuelve a consultar el archivo. Lo usa la carga masiva al terminar. */
+    public void recargar() {
+        refrescar();
+    }
+
     private void refrescar() {
         try {
             List<Paciente> resultado = servicio.buscar(txtBuscar.getText());

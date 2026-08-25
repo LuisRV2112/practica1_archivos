@@ -420,6 +420,16 @@ public class PanelCitas extends JPanel {
         }
     }
 
+    /**
+     * Vuelve a consultar el archivo y a llenar los combos. Lo usa la carga
+     * masiva: si se cargaron medicos o pacientes nuevos, las listas de esta
+     * pantalla tienen que enterarse.
+     */
+    public void recargar() {
+        recargarCombos();
+        refrescar();
+    }
+
     /** Vuelve a consultar el archivo aplicando los filtros activos. */
     private void refrescar() {
         try {

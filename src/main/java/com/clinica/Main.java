@@ -6,6 +6,7 @@ import com.clinica.persistencia.ArchivoMedicos;
 import com.clinica.persistencia.ArchivoPacientes;
 import com.clinica.servicio.ServicioBitacora;
 import com.clinica.servicio.ServicioCitas;
+import com.clinica.servicio.ServicioCargaMasiva;
 import com.clinica.servicio.ServicioReportes;
 import com.clinica.servicio.ServicioMedicos;
 import com.clinica.servicio.ServicioPacientes;
@@ -66,10 +67,14 @@ public class Main {
             ServicioReportes servicioReportes = new ServicioReportes(
                     servicioMedicos, servicioPacientes, servicioCitas, servicioBitacora);
 
+            ServicioCargaMasiva servicioCarga = new ServicioCargaMasiva(
+                    servicioMedicos, servicioPacientes, servicioCitas, servicioBitacora);
+
             new VentanaPrincipal(archivoMedicos, servicioMedicos,
                     archivoPacientes, servicioPacientes,
                     archivoCitas, servicioCitas,
-                    archivoBitacora, servicioBitacora, servicioReportes).setVisible(true);
+                    archivoBitacora, servicioBitacora, servicioReportes,
+                    servicioCarga).setVisible(true);
 
         } catch (IOException e) {
             JOptionPane.showMessageDialog(null,

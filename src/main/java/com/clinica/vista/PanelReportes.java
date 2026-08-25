@@ -355,6 +355,11 @@ public class PanelReportes extends JPanel {
     // AUXILIARES
     // =======================================================================
 
+    /** Vuelve a llenar los combos. Lo usa la carga masiva al terminar. */
+    public void recargar() {
+        recargarCombos();
+    }
+
     private void recargarCombos() {
         try {
             Object medicoPrevio = cboMedico.getSelectedItem();
